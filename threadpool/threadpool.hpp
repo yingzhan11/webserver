@@ -26,6 +26,7 @@ public:
 template <typename T>
 threadpool<T>::threadpool(int tri_mode, int threadnum, int maxrequest) : w_trimode(tri_mode), w_threadnum(threadnum), w_maxrequest(maxrequest), w_threads(nullptr)
 {
+
 	if (w_threadnum <= 0 || w_maxrequest <= 0)
 		throw std::runtime_error("invalid threadnum or maxrequest");
 	w_threads = new pthread_t[w_threadnum];
@@ -49,7 +50,7 @@ template <typename T>
 void *threadpool<T>::worker(void *arg)
 {
 	threadpool *pool = (threadpool *)arg;
-
+	pool->run();
 	return pool;
 }
 template <typename T>

@@ -4,9 +4,9 @@ int main(int ac, char **av)
 	try
 	{
 		Config &Config = Config::getinstance();
-
 		webserver server;
 		server.thread_pool();
+		server.eventlisten();
 	}
 	catch (const std::exception &e)
 	{
