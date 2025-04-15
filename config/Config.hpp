@@ -30,7 +30,21 @@ struct ServerConfig
 	size_t client_body_size = 1024 * 1024; // 1MB
 	bool directory_listing = false;
 	std::vector<RouteConfig> routes;
+	bool operator==(const ServerConfig &other) const {
+	return  server_name == other.server_name;
+}
 };
+
+
+namespace std {
+	template <>
+	struct hash<ServerConfig> {
+		std::size_t operator()(const ServerConfig& config) const {
+			return std::hash<std::string>{}(config.server_name);
+		}
+	};
+}
+
 
 
 class Config

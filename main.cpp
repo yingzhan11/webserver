@@ -7,6 +7,7 @@ int main(int ac, char **av)
 		webserver server;
 		server.thread_pool();
 		server.eventlisten();
+		server.eventloop();
 	}
 	catch (const std::exception &e)
 	{

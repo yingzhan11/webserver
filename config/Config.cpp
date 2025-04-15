@@ -8,14 +8,16 @@ Config::Config()
 	this->addServer(std::move(server2));
 	ServerConfig server3;
 	this->addServer(std::move(server3));
-	ServerConfig server4;
-	this->addServer(std::move(server4));
-	ServerConfig server5;
-	this->addServer(std::move(server5));
-	this->servers[1].ip = "10.13.2.7";
-	this->servers[2].ip = "192.168.122.1";
-	this->servers[3].ip = "172.17.0.1";
-	this->servers[4].ip = "";
+	// ServerConfig server4;
+	// this->addServer(std::move(server4));
+	// ServerConfig server5;
+	// this->addServer(std::move(server5));
+	this->servers[1].ip = "";
+	this->servers[1].server_name = "server1aa";
+	this->servers[2].ip = "";
+	this->servers[2].server_name = "server2hh";
+	// this->servers[3].ip = "";
+	// this->servers[4].ip = "";
 
 	// this->servers[1].ports[0] = 8080;
 	// this->servers[1].ports[1] = 8019;
@@ -37,3 +39,4 @@ void	Config::addRoute(RouteConfig&& route,int i)
 {
 	this->servers[i].routes.push_back(std::move(route));
 }
+

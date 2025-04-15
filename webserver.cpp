@@ -16,57 +16,116 @@ void webserver::thread_pool()
 {
 	w_pool = new threadpool<http_request>(w_trimode, w_threadnum, w_maxrequest);
 }
-bool isAlreadyBound(const std::string &ip, int port,
-					const std::unordered_map<int, std::unordered_set<std::string>> &boundIPs)
-{
-	auto it = boundIPs.find(port);
-	if (it != boundIPs.end())
-		return it->second.count(ip) > 0;
-	return false;
-}
+// bool isAlreadyBound(const std::string &ip, int port,
+// 					const std::unordered_map<int, std::unordered_set<std::string>> &boundIPs)
+// {
+// 	auto it = boundIPs.find(port);
+// 	if (it != boundIPs.end())
+// 		return it->second.count(ip) > 0;
+// 	return false;
+// }
+
 void webserver::eventlisten()
 {
-	int linger = 0;
 	std::unordered_map<int, std::unordered_set<std::string>> boundIPs;
-		std::vector<std::string> globalIpset = checkifaddr();
-	for (const ServerConfig &server : this->config.servers)
+	std::vector<std::string> globalIpset = checkifaddr();
+
+	for (const ServerConfig &server : config.servers)
 	{
 		for (int port : server.ports)
 		{
+			std::string ipport = server.ip + ":" + std::to_string(port);
+			// std::cout << "Iport:" << ipport << std::endl;
 			if (!server.ip.empty())
 			{
-				if (isAlreadyBound(server.ip, port, boundIPs))
+				if (boundIPs[port].count(server.ip))
 				{
-					std::cout<< server.ip <<":" <<port << " Aready bound.Move to next!" << std::endl;
+					// std::cout << server.ip << ":" << port << " Aready bound.Move to next!" << std::endl;
+					CurrentIpMemberServer[listenfd[ipport]].insert(server);
+					// std::cout << "---------------------------------fd:" << listenfd[ipport] << std::endl
+					// 		  << std::endl;
 					continue;
 				}
 				int socket = createListenSocket(server.ip.c_str(), port, &boundIPs);
-				this->listenfd.push_back(std::move(socket));
+				listenfd[ipport] = socket;
+				//std::cout << "listenfd:" << socket << "  server:" << server.server_name << std::endl
+						 // << std::endl;
+				CurrentIpMemberServer[socket].insert(server);
+				// std::cout << "---------------------------------fd:" << socket << std::endl
+				// 		  << std::endl;
 			}
 			else
 			{
 				std::vector<std::string> ipset = globalIpset;
 				ipset.erase(std::remove_if(ipset.begin(), ipset.end(), [&](const std::string &ip)
-										   { return isAlreadyBound(ip, port, boundIPs); }),
+										   { return boundIPs[port].count(ip) > 0; }),
 							ipset.end());
 				if (ipset.size() == 0)
 				{
-					std::cout << "Current All:port already bound.Move to next!" << std::endl;
+					// std::cout << "Current All:port already bound.Move to next!" << std::endl;
+					for (std::string ip : globalIpset)
+					{
+						std::string gloipport = ip + ":" + std::to_string(port);
+						// std::cout << "gloipport:" << gloipport << "  server:" << server.server_name << std::endl
+						// 		  << std::endl;
+						CurrentIpMemberServer[listenfd[gloipport]].insert(server);
+						// std::cout << "---------------------------------glofd1:" << listenfd[gloipport] << std::endl
+						// 		  << std::endl;
+					}
 					continue;
 				}
 				for (const std::string &ip : ipset)
 				{
+					ipport = ip + ":" + std::to_string(port);
+
 					int socket = createListenSocket(ip.c_str(), port, &boundIPs);
-					this->listenfd.push_back(std::move(socket));
+					listenfd[ipport] = socket;
+					// std::cout << "listenfd:" << socket << "  server:" << server.server_name << std::endl
+					// 		  << std::endl;
+					// CurrentIpMemberServer[socket].insert(server);
+				}
+				for (std::string ip : globalIpset)
+				{
+					std::string gloipport = ip + ":" + std::to_string(port);
+					// std::cout << "gloipport:" << gloipport << "  server:" << server.server_name << std::endl
+					// 		  << std::endl;
+					CurrentIpMemberServer[listenfd[gloipport]].insert(server);
+					// std::cout << "---------------------------------glofd2:" << listenfd[gloipport] << std::endl
+					// 		  << std::endl;
 				}
 			}
 		}
 	}
+	// for (auto it = CurrentIpMemberServer.begin(); it != CurrentIpMemberServer.end(); ++it)
+	// {
+	// 	int fd = it->first;
+	// 	const std::unordered_set<ServerConfig> &serverSet = it->second;
+
+	// 	std::cout << "Socket FD: " << fd << " -> Servers:\n";
+	// 	for (const ServerConfig &server : serverSet)
+	// 		std::cout << server.server_name << "\n";
+	// }
+	epollrigster();
+}
+
+void webserver::epollrigster()
+{
+	w_epollfd = epoll_create(5);
+	assert(w_epollfd != -1);
+	for (auto it = listenfd.begin(); it != listenfd.end(); it++)
+	{
+		//std::cout << "fd:" << it->second << std::endl;
+		util.addfd(w_epollfd, it->second, false, w_trimode);
+	}
+	http_request::w_epollfd = w_epollfd;
+
+	// int number = epoll_wait(w_epollfd, events, MAX_EVENTNUMBER, -1);
+	// std::cout << "Number:" << number << std::endl;
 }
 void webserver::eventloop()
 {
-}
 
+}
 
 std::vector<std::string> checkifaddr()
 {
@@ -108,6 +167,6 @@ int createListenSocket(const char *ip, int port, std::unordered_map<int, std::un
 	assert(ret >= 0);
 	if (ip)
 		(*boundIPs)[port].insert(std::string(ip));
-	std::cout<< ip <<":" <<port << " Successed!" << std::endl;
+
 	return listenfd;
 }

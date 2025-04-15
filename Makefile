@@ -8,7 +8,8 @@ FLAGS := -std=c++11 # -Wall -Wextra -Werror
 SRCS := main.cpp webserver.cpp \
         threadpool/threadpool.cpp \
         config/Config.cpp \
-		http/http_request.cpp
+		http/http_request.cpp\
+		Utils/utils.cpp\
 
 
 OBJS_DIR := objs
