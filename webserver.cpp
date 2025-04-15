@@ -2,19 +2,18 @@
 
 webserver::webserver() : w_pool(nullptr), config(Config::getinstance())
 {
-	w_trimode = 1;
-	w_threadnum = 8;
-	w_maxrequest = 10000;
+	users = new http_request[MAX_FD];
 }
 webserver::~webserver()
 {
 	if (w_pool)
 		delete w_pool;
+	delete[] users;
 }
 
 void webserver::thread_pool()
 {
-	w_pool = new threadpool<http_request>(w_trimode, w_threadnum, w_maxrequest);
+	w_pool = new threadpool<http_request>(1, w_threadnum, w_maxrequest);
 }
 // bool isAlreadyBound(const std::string &ip, int port,
 // 					const std::unordered_map<int, std::unordered_set<std::string>> &boundIPs)
@@ -118,13 +117,134 @@ void webserver::epollrigster()
 		util.addfd(w_epollfd, it->second, false, w_trimode);
 	}
 	http_request::w_epollfd = w_epollfd;
-
+	int ret = socketpair(PF_UNIX,SOCK_STREAM,0,w_pipefd);
+	assert(ret != -1);
+	util.setnonblocking(w_pipefd[1]);
+	util.addsig(SIGPIPE,SIG_IGN);
+	util.addsig(SIGTERM,util.sig_handler,false);
+	utils::u_pipefd = w_pipefd;
+	utils::u_epollfd = w_epollfd;
 	// int number = epoll_wait(w_epollfd, events, MAX_EVENTNUMBER, -1);
 	// std::cout << "Number:" << number << std::endl;
 }
-void webserver::eventloop()
+bool webserver::isListenfd(int sockfd)
+{
+		for(const auto& fd:listenfd)
+		{
+			if(sockfd == fd.second)
+				return true;
+		}
+		return false;
+}
+bool webserver::dealclientdata(int sockfd)
+{
+	struct  sockaddr_in client_add;
+	socklen_t client_addrlength = sizeof(client_add);
+	if(0 == w_trimode) //LT
+	{
+		int connfd = accept(sockfd,(struct sockaddr *)&client_add, &client_addrlength);
+		{
+			if(connfd < 0)
+			{
+				perror("accept error");
+				return false;
+			}
+			if(http_request::w_user_count >= MAX_FD)
+			{
+				util.show_error(connfd,"Internal server busy");
+				return false;
+			}
+		}
+		users[connfd].init(connfd, client_add,0,sockfd);
+	}
+	else //ET
+	{
+		while(1)
+		{
+			int connfd = accept(sockfd,(struct sockaddr *)&client_add, &client_addrlength);
+			if(connfd < 0)
+			{
+				perror("accept error");
+				break;
+			}
+			if(http_request::w_user_count >= MAX_FD)
+			{
+				util.show_error(connfd,"Internal server busy");
+				break;
+			}
+			users[connfd].init(connfd, client_add,1);
+		}
+		return false;
+	}
+	return true;
+}
+bool webserver::dealwithsignal(bool &stop_server)
+{
+	int ret = 0;
+	int sig;
+	char signals[1024];
+	ret = recv(w_pipefd[0],signals,sizeof(signals),0);
+	if(-1  == ret || 0 == ret)
+		return false;
+	else
+	{
+		for (int i = 0; i < ret; ++i)
+        {
+            switch (signals[i])
+            {
+            // case SIGALRM:
+            // {
+            //     timeout = true;
+            //     break;
+            // }
+            case SIGTERM:
+            {
+                stop_server = true;
+                break;
+            }
+            }
+        }
+	}
+}
+void webserver::dealwithread(int sockfd)
 {
 
+}
+void webserver::dealwithwrite(int sockfd)
+{
+	w_pool->append(users + sockfd,0);
+}
+void webserver::eventloop()
+{
+	bool stop = false;
+	while(!stop)
+	{
+		int number = epoll_wait(w_epollfd,events,MAX_EVENTNUMBER,-1);
+		if(number < 0 && errno != EINTR)
+		{
+			perror("Epoll failed");
+			break;
+		}
+		for(int i = 0;i < number; i++)
+		{
+			int sockfd =  events[i].data.fd;
+			if(isListenfd(sockfd))
+			{
+				if(!dealclientdata(sockfd))
+					continue;
+			}
+			else if((sockfd == w_pipefd[0]) && (events[i].events & EPOLLIN))
+			{
+
+                if (!dealwithsignal(stop))
+					perror("dealclientdata failure");
+			}
+			else if (events[i].events & EPOLLIN)
+                dealwithread(sockfd);
+            else if (events[i].events & EPOLLOUT)
+                dealwithwrite(sockfd);
+		}
+	}
 }
 
 std::vector<std::string> checkifaddr()

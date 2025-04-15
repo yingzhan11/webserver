@@ -35,11 +35,17 @@ public:
 	void eventlisten();
 	void eventloop();
 	void epollrigster();
+	bool isListenfd(int sockfd);
+	bool dealclientdata(int sockfd);
+	bool dealwithsignal(bool &stop_server);
+	void dealwithread(int sockfd);
+	void dealwithwrite(int sockfd);
 public:
 	int w_threadnum; // number of threads
 	int w_trimode;	 // trigger model
 	int w_maxrequest;
 	utils util;
+	http_request *users;
 };
 
 int createListenSocket(const char *ip, int port, std::unordered_map<int, std::unordered_set<std::string>> *boundIPs);

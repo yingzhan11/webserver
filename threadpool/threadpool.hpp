@@ -21,6 +21,8 @@ private:
 public:
 	threadpool(int tri_mode, int threadnum = 8, int maxrequest = 10000);
 	~threadpool();
+	bool append(T *requst, int state);
+	bool append(T *requst);
 
 };
 template <typename T>
@@ -61,6 +63,7 @@ void	threadpool<T>::run()
 template <typename T>
 threadpool<T>::~threadpool()
 {
+
 	if (w_threads)
 		delete[] w_threads;
 }
