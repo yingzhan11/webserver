@@ -23,7 +23,6 @@ private:
 	threadpool<http_request> *w_pool;
 	int w_pipefd[2];
 	int w_epollfd;
-	http_request *users;
 	Config &config;
 	std::unordered_map<int, std::unordered_set<ServerConfig>> CurrentIpMemberServer;
 	std::unordered_map<std::string, int> listenfd;
@@ -42,7 +41,7 @@ public:
 	void dealwithwrite(int sockfd);
 public:
 	int w_threadnum; // number of threads
-	int w_trimode;	 // trigger model
+	int w_trimode = 1;	 // trigger model
 	int w_maxrequest;
 	utils util;
 	http_request *users;

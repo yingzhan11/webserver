@@ -6,11 +6,11 @@
 /*   By: yzheng <yzheng@student.hive.fi>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/14 13:37:23 by yzheng            #+#    #+#             */
-/*   Updated: 2025/04/15 17:12:55 by yzheng           ###   ########.fr       */
+/*   Updated: 2025/05/20 17:18:54 by yzheng           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-
+#include <iostream>
 #include "./utils.hpp"
 void utils::setnonblocking(int fd)
 {
@@ -38,7 +38,7 @@ void utils::show_error(int connfd, const char *info)
     send(connfd, info, strlen(info), 0);
     close(connfd);
 }
-void utils::addsig(int sig,void(handler)(int),bool restart = true)
+void utils::addsig(int sig,void(handler)(int),bool restart)
 {
 	struct sigaction sa;
 	memset(&sa,'\0',sizeof(sa));
@@ -54,5 +54,6 @@ void utils::sig_handler(int sig)
     int save_errno = errno;
     int msg = sig;
     send(u_pipefd[1], (char *)&msg, 1, 0);
+
     errno = save_errno;
 }

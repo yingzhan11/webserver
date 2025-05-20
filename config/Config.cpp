@@ -12,18 +12,19 @@ Config::Config()
 	// this->addServer(std::move(server4));
 	// ServerConfig server5;
 	// this->addServer(std::move(server5));
-	this->servers[1].ip = "";
-	this->servers[1].server_name = "server1aa";
-	this->servers[2].ip = "";
+	this->servers[1].ip = "127.0.0.1";
+	this->servers[1].ports[0] = 9090;
+
+	this->servers[1].server_name = "server1dumb";
+	this->servers[2].ip = "127.0.0.1";
 	this->servers[2].server_name = "server2hh";
+
 	// this->servers[3].ip = "";
 	// this->servers[4].ip = "";
 
 	// this->servers[1].ports[0] = 8080;
 	// this->servers[1].ports[1] = 8019;
 	this->addRoute(std::move(route_config),0);
-
-
 }
 Config::~Config(){}
 Config& Config::getinstance()

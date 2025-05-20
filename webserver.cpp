@@ -6,6 +6,7 @@ webserver::webserver() : w_pool(nullptr), config(Config::getinstance())
 }
 webserver::~webserver()
 {
+	std::cout << "Delete\n";
 	if (w_pool)
 		delete w_pool;
 	delete[] users;
@@ -13,7 +14,7 @@ webserver::~webserver()
 
 void webserver::thread_pool()
 {
-	w_pool = new threadpool<http_request>(1, w_threadnum, w_maxrequest);
+	w_pool = new threadpool<http_request>(1);
 }
 // bool isAlreadyBound(const std::string &ip, int port,
 // 					const std::unordered_map<int, std::unordered_set<std::string>> &boundIPs)
@@ -47,8 +48,8 @@ void webserver::eventlisten()
 				}
 				int socket = createListenSocket(server.ip.c_str(), port, &boundIPs);
 				listenfd[ipport] = socket;
-				//std::cout << "listenfd:" << socket << "  server:" << server.server_name << std::endl
-						 // << std::endl;
+				// std::cout << "listenfd:" << socket << "  server:" << server.server_name << std::endl
+				//  << std::endl;
 				CurrentIpMemberServer[socket].insert(server);
 				// std::cout << "---------------------------------fd:" << socket << std::endl
 				// 		  << std::endl;
@@ -76,7 +77,7 @@ void webserver::eventlisten()
 				for (const std::string &ip : ipset)
 				{
 					ipport = ip + ":" + std::to_string(port);
-
+					std::cout << "Iport:" << ipport << std::endl;
 					int socket = createListenSocket(ip.c_str(), port, &boundIPs);
 					listenfd[ipport] = socket;
 					// std::cout << "listenfd:" << socket << "  server:" << server.server_name << std::endl
@@ -113,15 +114,16 @@ void webserver::epollrigster()
 	assert(w_epollfd != -1);
 	for (auto it = listenfd.begin(); it != listenfd.end(); it++)
 	{
-		//std::cout << "fd:" << it->second << std::endl;
+		// std::cout << "fd:" << it->second << std::endl;
 		util.addfd(w_epollfd, it->second, false, w_trimode);
 	}
 	http_request::w_epollfd = w_epollfd;
-	int ret = socketpair(PF_UNIX,SOCK_STREAM,0,w_pipefd);
+	int ret = socketpair(PF_UNIX, SOCK_STREAM, 0, w_pipefd);
 	assert(ret != -1);
 	util.setnonblocking(w_pipefd[1]);
-	util.addsig(SIGPIPE,SIG_IGN);
-	util.addsig(SIGTERM,util.sig_handler,false);
+	util.addfd(w_epollfd, w_pipefd[0], false, 0);
+	util.addsig(SIGPIPE, SIG_IGN);
+	util.addsig(SIGINT, util.sig_handler, false);
 	utils::u_pipefd = w_pipefd;
 	utils::u_epollfd = w_epollfd;
 	// int number = epoll_wait(w_epollfd, events, MAX_EVENTNUMBER, -1);
@@ -129,50 +131,66 @@ void webserver::epollrigster()
 }
 bool webserver::isListenfd(int sockfd)
 {
-		for(const auto& fd:listenfd)
-		{
-			if(sockfd == fd.second)
-				return true;
-		}
-		return false;
+	for (const auto &fd : listenfd)
+	{
+		if (sockfd == fd.second)
+			return true;
+	}
+	return false;
 }
 bool webserver::dealclientdata(int sockfd)
 {
-	struct  sockaddr_in client_add;
+	struct sockaddr_in client_add;
 	socklen_t client_addrlength = sizeof(client_add);
-	if(0 == w_trimode) //LT
+	if (0 == w_trimode) // LT
 	{
-		int connfd = accept(sockfd,(struct sockaddr *)&client_add, &client_addrlength);
+		int connfd = accept(sockfd, (struct sockaddr *)&client_add, &client_addrlength);
 		{
-			if(connfd < 0)
+			if (connfd < 0)
 			{
 				perror("accept error");
 				return false;
 			}
-			if(http_request::w_user_count >= MAX_FD)
+			if (http_request::w_user_count >= MAX_FD)
 			{
-				util.show_error(connfd,"Internal server busy");
+				util.show_error(connfd, "Internal server busy");
 				return false;
 			}
 		}
-		users[connfd].init(connfd, client_add,0,sockfd);
-	}
-	else //ET
-	{
-		while(1)
+		users[connfd].init(connfd, client_add, 0);
+		auto it = CurrentIpMemberServer.find(sockfd);
+		if (it != CurrentIpMemberServer.end())
 		{
-			int connfd = accept(sockfd,(struct sockaddr *)&client_add, &client_addrlength);
-			if(connfd < 0)
+			users[connfd].serverconfig = &it->second;
+		}
+	}
+	else // ET
+	{
+		while (1)
+		{
+			int connfd = accept(sockfd, (struct sockaddr *)&client_add, &client_addrlength);
+			if (connfd < 0)
 			{
+				if (errno == EAGAIN || errno == EWOULDBLOCK)
+				{
+
+					break;
+				}
 				perror("accept error");
 				break;
 			}
-			if(http_request::w_user_count >= MAX_FD)
+			if (http_request::w_user_count >= MAX_FD)
 			{
-				util.show_error(connfd,"Internal server busy");
+				util.show_error(connfd, "Internal server busy");
 				break;
 			}
-			users[connfd].init(connfd, client_add,1);
+			users[connfd].init(connfd, client_add, 1);
+
+			auto it = CurrentIpMemberServer.find(sockfd);
+			if (it != CurrentIpMemberServer.end())
+			{
+				users[connfd].serverconfig = &it->second;
+			}
 		}
 		return false;
 	}
@@ -183,66 +201,99 @@ bool webserver::dealwithsignal(bool &stop_server)
 	int ret = 0;
 	int sig;
 	char signals[1024];
-	ret = recv(w_pipefd[0],signals,sizeof(signals),0);
-	if(-1  == ret || 0 == ret)
+	std::cout << "Ddelete\n";
+	ret = recv(w_pipefd[0], signals, sizeof(signals), 0);
+	if (-1 == ret || 0 == ret)
 		return false;
 	else
 	{
 		for (int i = 0; i < ret; ++i)
-        {
-            switch (signals[i])
-            {
-            // case SIGALRM:
-            // {
-            //     timeout = true;
-            //     break;
-            // }
-            case SIGTERM:
-            {
-                stop_server = true;
-                break;
-            }
-            }
-        }
+		{
+			switch (signals[i])
+			{
+			// case SIGALRM:
+			// {
+			//     timeout = true;
+			//     break;
+			// }
+			case SIGINT:
+			{
+				std::cout << "Ddelete\n";
+				stop_server = true;
+				break;
+			}
+			}
+		}
 	}
+	return true;
 }
 void webserver::dealwithread(int sockfd)
 {
+	std::cout << "read\n" << std::endl;
+	w_pool->append(users + sockfd, 0);
 
+	while (true)
+	{
+		if (1 == users[sockfd].improv)
+		{
+			users[sockfd].improv = 0;
+			break;
+		}
+	}
 }
 void webserver::dealwithwrite(int sockfd)
 {
-	w_pool->append(users + sockfd,0);
+	std::cout << "write\n"
+			  << std::endl;
+	w_pool->append(users + sockfd, 0);
+	while (true)
+	{
+		if (1 == users[sockfd].improv)
+		{
+			// may timer
+			break;
+		}
+	}
 }
 void webserver::eventloop()
 {
 	bool stop = false;
-	while(!stop)
+	while (!stop)
 	{
-		int number = epoll_wait(w_epollfd,events,MAX_EVENTNUMBER,-1);
-		if(number < 0 && errno != EINTR)
+		int number = epoll_wait(w_epollfd, events, MAX_EVENTNUMBER, -1);
+		if (number < 0 && errno != EINTR)
 		{
 			perror("Epoll failed");
 			break;
 		}
-		for(int i = 0;i < number; i++)
+		for (int i = 0; i < number; i++)
 		{
-			int sockfd =  events[i].data.fd;
-			if(isListenfd(sockfd))
+			int sockfd = events[i].data.fd;
+			std::cout << "Event on fd: " << sockfd << ", event mask: " << events[i].events << std::endl;
+
+			if (isListenfd(sockfd))
 			{
-				if(!dealclientdata(sockfd))
+				std::cout << "data\n"
+						  << std::endl;
+				if (!dealclientdata(sockfd))
 					continue;
 			}
-			else if((sockfd == w_pipefd[0]) && (events[i].events & EPOLLIN))
+			else if ((sockfd == w_pipefd[0]) && (events[i].events & EPOLLIN))
 			{
-
-                if (!dealwithsignal(stop))
+				std::cout << "signallll\n";
+				if (!dealwithsignal(stop))
 					perror("dealclientdata failure");
 			}
 			else if (events[i].events & EPOLLIN)
-                dealwithread(sockfd);
-            else if (events[i].events & EPOLLOUT)
-                dealwithwrite(sockfd);
+			{
+				dealwithread(sockfd);
+			}
+			else if (events[i].events & EPOLLOUT)
+			{
+				std::cout << "write\n"
+						  << std::endl;
+				dealwithwrite(sockfd);
+			}
 		}
 	}
 }

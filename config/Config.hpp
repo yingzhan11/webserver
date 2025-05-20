@@ -22,7 +22,7 @@ struct ServerConfig
 {
 	std::string ip = "127.0.0.1";
 	std::string server_name = "localhost";
-	std::vector<int> ports = {8080,9090};
+	std::vector<int> ports = {8080};
 	//port should greater than 1024 in unix!
 	std::string root_directory = "/var/www/html";
 	std::string default_file = "index.html";
