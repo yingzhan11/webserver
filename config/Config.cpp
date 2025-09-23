@@ -54,7 +54,8 @@ Config& Config::getinstance(int ac, char **av)
 void Config::_addConfigToServers(Parser &parser)
 {
 	//TODO需要修改，保存多个value的情况
-	std::vector<RawServer> server_settings = parser.servers_settings;
+	//todo 需要检查parser的结果
+	std::vector<RawServer> server_settings = parser.serverVec;
 	for (size_t i = 0; i < server_settings.size(); ++i)
 	{
 		ServerConfig server;

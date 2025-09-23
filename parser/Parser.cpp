@@ -2,24 +2,16 @@
 
 Parser::Parser(int ac, char **av)
 {
-    //1-检查ac, av格式是否正确TODO，如果没有av，ac，就用默认路径
-    if (ac > 2)
-        throw std::runtime_error("Parser Error: Too many arguments");
-    else if (ac == 2)
-        this->_configPath = av[1];
-    else
-        this->_configPath = "configFiles/multi_ports.conf"; //默认路径
-        // std::cout << "Using default config file: " << this->_configPath << std::endl;
+    //1-检查ac, av格式是否正确，如果没有av，ac，就用默认路径
+    _isValidInput(ac, av);
+
+    //2-检查是否是.conf文件，以及.conf文件能否正确打开
+    _isValidConfigFile();
     
-    //2-检查confFile是否能正确打开
-    this->_configFileStream.open(this->_configPath.c_str());
-    if (!this->_configFileStream.is_open())
-        throw std::runtime_error("Parser Error: Couldn't open .conf file.");
-    // else
-    //     std::cout << "Config file opened successfully: " << this->_configPath << std::endl;
-    
-    //3-准备parser
+    //3-准备parser，初始化需要的keywords和参数
     _initValidKeywords();
+    this->_bracketOpen = 0;
+    this->_foundServer = false;
 
     //4-parser
     _startParsing();
@@ -31,6 +23,39 @@ Parser::~Parser()
 }
 
 /*Private*/
+//检查ac, av格式是否正确，如果没有av，ac，就用默认路径
+void Parser::_isValidInput(int ac, char **av)
+{
+    if (ac > 2)
+        throw std::runtime_error("Parser Error: Too many arguments");
+    else if (ac == 2)
+        this->_configPath = av[1];
+    else
+        this->_configPath = "configFiles/default.conf"; //默认路径
+}
+
+//检查是否是.conf文件，以及.conf文件能否正确打开
+void Parser::_isValidConfigFile()
+{
+    //检查文件名是否正确
+    std::string filename = this->_configPath;
+
+    size_t slash = filename.find_last_of("/");
+    if (slash != std::string::npos)
+        filename = this->_configPath.substr(slash + 1);
+    
+    size_t dot = filename.find_last_of(".");
+    if (dot == std::string::npos || filename.substr(dot) != ".conf" || filename == ".conf")
+        throw std::runtime_error("Parser Error: Extension should be .conf");
+
+    //检查confFile是否能正确打开
+    this->_configFileStream.open(this->_configPath.c_str());
+    if (!this->_configFileStream.is_open())
+        throw std::runtime_error("Parser Error: Couldn't open .conf file.");
+    // else
+    //     std::cout << "Config file opened successfully: " << this->_configPath << std::endl;
+}
+
 //初始化合法的keywords
 void Parser::_initValidKeywords() 
 {
@@ -61,18 +86,18 @@ void Parser::_startParsing()
     char currentChar = this->_configFileStream.get();
     // std::cout << "1-Initial char read: '" << currentChar << "'" << std::endl;
 
-    std::string token = this->_checkNextToken(currentChar);
+    std::string token = _checkNextToken(currentChar);
     // std::cout << "1-First token: " << token << std::endl;
 
     while (token != "END")
     {
         // std::cout << "1-Parsing server block..." << std::endl;
         //获取第一个server的config setting
-        this->_parseServerSetting(token, currentChar);
+        _parseServerSetting(token, currentChar);
         //放到servers settings里
-        this->servers_settings.push_back(this->_server_setting);
+        this->serverVec.push_back(this->_serverSetting);
         //获取下一个token，可能是下一个server，可能是END
-        token = this->_checkNextToken(currentChar);
+        token = _checkNextToken(currentChar);
     }
 }
 
@@ -84,7 +109,7 @@ std::string Parser::_checkNextToken(char &currentChar)
 
     while (!this->_configFileStream.eof()) 
     {
-        if (this->_skipSpacesAndComments(currentChar)) {
+        if (_skipSpacesAndComments(currentChar)) {
             continue;
         }
         if (currentChar == '{')
@@ -101,7 +126,7 @@ std::string Parser::_checkNextToken(char &currentChar)
         }
         if (std::isalpha(currentChar))
         {
-            return (this->_getKeyword(currentChar, token));
+            return (_getKeyword(currentChar, token));
         }
         token += currentChar;
         currentChar = this->_configFileStream.get();
@@ -129,7 +154,7 @@ std::string Parser::_getKeyword(char &currentChar, std::string &keyword)
     {
         this->_foundServer = true;
         //只往后检查，不移动token
-        if(this->_checkNextToken(currentChar) != "{")
+        if(_checkNextToken(currentChar) != "{")
             throw std::runtime_error("Error: Server should be followed by \"{\"");
     }
     // std::cout << "3-Getting keyword: " << keyword << std::endl;
@@ -145,18 +170,20 @@ void Parser::_parseServerSetting(std::string &token, char &currentChar)
     if (token != "server")
         throw std::runtime_error("2-Error: Conf block must start with \"server\".");
     
-    this->_server_setting.clear();
+    this->_serverSetting.clear();
     while (token != "}" && token != "END")
     {
         //不是server和location就获取config
         if (token != "server")
-            this->_getSetting(token, currentChar);
+            _getSetting(token, currentChar);
         if (token == "location")
         {
-            std::cout << "need get location\n";
+            //TODO
+            _getLocationSetting(currentChar);
+            
         }
         //是server就获取下一个token
-        token = this->_checkNextToken(currentChar);
+        token = _checkNextToken(currentChar);
     }
     //这个server block结束了,检查括号是否匹配
     if (this->_bracketOpen != 0)
@@ -186,15 +213,22 @@ void Parser::_getSetting(std::string const &key, char &currentChar)
             currentChar = this->_configFileStream.get();
             break;
         }
-        // if (currentChar == '{')
+        // if (currentChar == '{') todo
         //     break;
+        //todo 检查空格和location
         value += currentChar;
         currentChar = this->_configFileStream.get();
     }
     if (value.empty())
         throw std::runtime_error("4-Error: No value found for this key: " + key);
     
-    this->_server_setting[key] = value;
+    this->_serverSetting[key] = value;
+}
+
+
+void Parser::_getLocationSetting(char &currentChar)
+{
+    std::cout << "4-need get location\n";
 }
 
 bool Parser::_skipSpacesAndComments(char &currentChar) 
@@ -207,12 +241,12 @@ bool Parser::_skipSpacesAndComments(char &currentChar)
         }
         return true;
     }
-    // if (currentChar == '#') 
-    // {
-    //     std::string discardedLine;
-    //     std::getline(this->fileStream, discardedLine); 
-    //     currentChar = this->fileStream.get(); 
-    //     return true;
-    // }
+    if (currentChar == '#')
+    {
+        std::string discardedLine;
+        std::getline(this->_configFileStream, discardedLine); 
+        currentChar = this->_configFileStream.get(); 
+        return true;
+    }
     return false;
 }
