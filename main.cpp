@@ -3,7 +3,7 @@ int main(int ac, char **av)
 {
 	try
 	{
-		Config &Config = Config::getinstance();
+		Config &Config = Config::getinstance(ac, av);
 		webserver server;
 		server.thread_pool();
 		server.eventlisten();

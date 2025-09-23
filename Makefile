@@ -10,6 +10,7 @@ SRCS := main.cpp webserver.cpp \
         config/Config.cpp \
 		http/http_request.cpp\
 		Utils/utils.cpp\
+		parser/Parser.cpp\
 
 
 OBJS_DIR := objs
