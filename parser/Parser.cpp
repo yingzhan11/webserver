@@ -123,6 +123,7 @@ void Parser::_parseServerSetting(std::string &token, char &currentChar)
         if (token == "location")
         {
             //TODO
+            
             this->_locations.insert(_getLocationSetting(currentChar));
 
         }

@@ -41,8 +41,7 @@ Config& Config::getinstance()
 //p
 void Config::addConfigToServers(RawSetting serverSetting, std::map<std::string, RawSetting>locations)
 {
-	//TODO需要修改，保存多个value的情况
-	//todo 需要检查parser的结果
+	//todo 需要检查
 
 	ServerConfig server;
 	//RouteConfig route;
@@ -90,11 +89,13 @@ void Config::addLocationToRoutes(ServerConfig &server, std::map<std::string, Raw
 			std::string method;
 			while (ss >> method)
 				route.allowed_methods.push_back(method);
+			//todo check if it is get post delete
 		}
 		if (it->second.find("return") != it->second.end())
 			route.redirect = it->second.at("return");
 		if (it->second.find("root") != it->second.end())
 			route.root_directory = it->second.at("root");
+			//todo check is there a /
 		if (it->second.find("autoindex") != it->second.end())
 			route.directory_listing = it->second.at("autoindex") == "on";
 		if (it->second.find("try_file") != it->second.end())
@@ -103,6 +104,8 @@ void Config::addLocationToRoutes(ServerConfig &server, std::map<std::string, Raw
 			route.cgi_extensions.push_back(it->second.at("cgi_ext"));
 		if (it->second.find("cgi_path") != it->second.end())
 			route.cgi_interpreters.push_back(it->second.at("cgi_path"));
+			//todo check is ther a /
+		//there is no upload to in routeconfig? TODO
 		server.routes.push_back(std::move(route));
 	}
 }
@@ -116,3 +119,4 @@ void	Config::addServer(ServerConfig&& server)
 //{
 //	this->servers[i].routes.push_back(std::move(route));
 //}
+
