@@ -6,8 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-
-#include "../parser/Parser.hpp"
+#include <map>
 
 // struct RouteConfig
 // {
@@ -38,6 +37,8 @@
 // 	return  server_name == other.server_name;
 // 	}
 // };
+
+using RawSetting = std::map<std::string, std::string>;
 
 struct RouteConfig
 {
@@ -83,7 +84,7 @@ private:
 	Config();
 	Config(int ac, char **av);
 
-	void _addConfigToServers(Parser &parser);
+	
 
 public:
 	static Config &getinstance();
@@ -93,7 +94,8 @@ public:
 	~Config();
 
 	std::vector<ServerConfig> servers;
-	
+
+	void	addConfigToServers(RawSetting serverSetting, std::map<std::string, RawSetting>locations);
 	void	addServer(ServerConfig&& server);
 	void	addRoute(RouteConfig&& route,int i);
 };

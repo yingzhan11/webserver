@@ -8,23 +8,7 @@
 #include <set>
 #include <map>
 
-// #include "../config/Config.hpp"
-
-// class ServerConfig;
-
-struct Location
-{
-    std::string root;
-    std::string redirect;
-    std::string tryFile;
-    std::string cgiPath;
-    std::string cgiExtension;
-    std::string uploadTo;
-    bool autoindex;
-    std::vector<std::string> allowedMethods;
-};
-
-using RawServer = std::map<std::string, std::string>;
+#include "../config/Config.hpp"
 
 class Parser
 {
@@ -35,8 +19,10 @@ class Parser
         int _bracketOpen;
         bool  _foundServer;
 
-        RawServer _serverSetting;
-        std::pair<std::string, Location> _locationSetting;
+        RawSetting _serverSetting;
+        //RawSetting _locationSetting;
+        //std::pair<std::string, RawSetting> _locations;
+        std::map<std::string, RawSetting> _locations;
 
         void _isValidInput(int ac, char **av);
         void _isValidConfigFile();
@@ -47,17 +33,13 @@ class Parser
         std::string _getKeyword(char &currentChar, std::string &keyword);
 
         void _parseServerSetting(std::string &token, char &currentChar);
-        void _getSetting(std::string const &key, char &currentChar);
-        void _getLocationSetting(char &currentChar);
+        void _getSetting(std::string const &key, char &currentChar, RawSetting &setting);
+        std::pair<std::string, RawSetting> _getLocationSetting(char &currentChar);
 
 
         bool _skipSpacesAndComments(char &currentChar);
         
     public:
-        //parser里存了config的原始数据，在config.cpp里对原始数据进行检查和记录
-        std::vector<RawServer> serverVec;
-        std::map<std::string, Location> locationMap;
-
         Parser(int ac, char **av);
         ~Parser();
         

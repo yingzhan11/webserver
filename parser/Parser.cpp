@@ -22,7 +22,9 @@ Parser::~Parser()
     this->_configFileStream.close();
 }
 
-/*Private*/
+/**
+ * prework before parsing
+ */
 //检查ac, av格式是否正确，如果没有av，ac，就用默认路径
 void Parser::_isValidInput(int ac, char **av)
 {
@@ -31,7 +33,7 @@ void Parser::_isValidInput(int ac, char **av)
     else if (ac == 2)
         this->_configPath = av[1];
     else
-        this->_configPath = "configFiles/default.conf"; //默认路径
+        this->_configPath = "configFiles/test.conf"; //默认路径
 }
 
 //检查是否是.conf文件，以及.conf文件能否正确打开
@@ -80,9 +82,13 @@ void Parser::_initValidKeywords()
     // _validKeywords.insert("try_file");
 }
 
-//开始parser解析文件，
+/**
+ * main parseing part
+ */
+//开始解析文件
 void Parser::_startParsing()
 {
+    
     char currentChar = this->_configFileStream.get();
     // std::cout << "1-Initial char read: '" << currentChar << "'" << std::endl;
 
@@ -94,13 +100,113 @@ void Parser::_startParsing()
         // std::cout << "1-Parsing server block..." << std::endl;
         //获取第一个server的config setting
         _parseServerSetting(token, currentChar);
-        //放到servers settings里
-        this->serverVec.push_back(this->_serverSetting);
+        
         //获取下一个token，可能是下一个server，可能是END
         token = _checkNextToken(currentChar);
     }
 }
 
+//解析server block and put into Config.servers
+void Parser::_parseServerSetting(std::string &token, char &currentChar)
+{
+    // std::cout << "2-Entered _parseServerSetting function. token is:" << token << std::endl;
+    if (token != "server")
+        throw std::runtime_error("2-Error: Conf block must start with \"server\".");
+    
+    this->_serverSetting.clear();
+    while (token != "}" && token != "END")
+    {
+        //不是server就获取config
+        if (token != "server")
+            _getSetting(token, currentChar, this->_serverSetting);
+        // if it is location, need more exe
+        if (token == "location")
+        {
+            //TODO
+            //this->_locationSetting.clear();
+            this->_locations.insert(_getLocationSetting(currentChar));
+
+        }
+        //是server就获取下一个token
+        token = _checkNextToken(currentChar);
+    }
+    //这个server block结束了,检查括号是否匹配
+    if (this->_bracketOpen != 0)
+        throw std::runtime_error("2-Error: Bracket error detected.");
+    // if bracket closed, add this server into servers Config
+    else
+        Config::getinstance().addConfigToServers(this->_serverSetting, this->_locations);
+}
+
+//parse locations
+std::pair<std::string, RawSetting> Parser::_getLocationSetting(char &currentChar)
+{
+    //std::cout << "4-need get location\n";
+    std::string locationTitle;
+    RawSetting locationSetting;
+    std::string token;
+
+    //get the location title
+    locationTitle = this->_serverSetting["location"];
+    //clean the location title's format, extra spaces
+    locationTitle.erase(0, locationTitle.find_first_not_of(" \t\r\v\f"));
+    locationTitle.erase(locationTitle.find_last_not_of(" \t\r\v\f") + 1);
+    //delete location temp
+    this->_serverSetting.erase("location");
+
+    // check the {} format after location
+    if (_checkNextToken(currentChar) != "{")
+        throw std::runtime_error("Error: Location xx has no { after it");
+    // if there is {, get the value until } or eof
+    token = _checkNextToken(currentChar);
+    while (!this->_configFileStream.eof() && token != "}")
+    {
+        _getSetting(token, currentChar, locationSetting);
+        token = _checkNextToken(currentChar);
+    }
+    return (std::make_pair(locationTitle, locationSetting));
+}
+
+//parser value from configFile to RawSetting type
+void Parser::_getSetting(std::string const &key, char &currentChar, RawSetting &setting)
+{
+    if (key == "{")
+        return;
+
+    //获取key后面的value
+    std::string value = "";
+
+    // std::cout << "4-Getting setting for key: " << key << std::endl;
+    // std::cout << "4.1-Current char before reading value: '" << currentChar << "'" << std::endl;
+    
+    while (!this->_configFileStream.eof() && std::isspace(currentChar)) 
+        currentChar = this->_configFileStream.get();
+    
+    // std::cout << "4.1-Current char before reading value: '" << currentChar << "'" << std::endl;
+    while (!this->_configFileStream.eof())
+    {
+        if (currentChar == ';')
+        {
+            //跳过；去下一个char
+            currentChar = this->_configFileStream.get();
+            break;
+        }
+        if (currentChar == '{')
+            break;
+        //todo 检查空格和location
+        if (std::isspace(currentChar) && key != "allow_methods" && key != "location")
+            throw std::runtime_error("Error: too many value in this key: " + key);
+        value += currentChar;
+        currentChar = this->_configFileStream.get();
+    }
+    if (value.empty())
+        throw std::runtime_error("4-Error: No value found for this key: " + key);
+    setting[key] = value;
+}
+
+/**
+ * helper functions
+ */
 //检查下一个token
 std::string Parser::_checkNextToken(char &currentChar)
 {
@@ -160,75 +266,6 @@ std::string Parser::_getKeyword(char &currentChar, std::string &keyword)
     // std::cout << "3-Getting keyword: " << keyword << std::endl;
     // std::cout << "3-Next char after keyword: '" << currentChar << "'" << std::endl;
     return (keyword);
-}
-
-//解析server block
-void Parser::_parseServerSetting(std::string &token, char &currentChar)
-{
-    // std::cout << "2-Entered _parseServerSetting function. token is:" << token << std::endl;
-    
-    if (token != "server")
-        throw std::runtime_error("2-Error: Conf block must start with \"server\".");
-    
-    this->_serverSetting.clear();
-    while (token != "}" && token != "END")
-    {
-        //不是server和location就获取config
-        if (token != "server")
-            _getSetting(token, currentChar);
-        if (token == "location")
-        {
-            //TODO
-            _getLocationSetting(currentChar);
-            
-        }
-        //是server就获取下一个token
-        token = _checkNextToken(currentChar);
-    }
-    //这个server block结束了,检查括号是否匹配
-    if (this->_bracketOpen != 0)
-        throw std::runtime_error("2-Error: Bracket error detected.");    
-}
-
-void Parser::_getSetting(std::string const &key, char &currentChar)
-{
-    if (key == "{")
-        return;
-
-    //获取key后面的value
-    std::string value = "";
-
-    // std::cout << "4-Getting setting for key: " << key << std::endl;
-    // std::cout << "4.1-Current char before reading value: '" << currentChar << "'" << std::endl;
-    
-    while (!this->_configFileStream.eof() && std::isspace(currentChar)) 
-        currentChar = this->_configFileStream.get();
-    
-        // std::cout << "4.1-Current char before reading value: '" << currentChar << "'" << std::endl;
-    while (!this->_configFileStream.eof())
-    {
-        if (currentChar == ';')
-        {
-            //跳过；去下一个char
-            currentChar = this->_configFileStream.get();
-            break;
-        }
-        // if (currentChar == '{') todo
-        //     break;
-        //todo 检查空格和location
-        value += currentChar;
-        currentChar = this->_configFileStream.get();
-    }
-    if (value.empty())
-        throw std::runtime_error("4-Error: No value found for this key: " + key);
-    
-    this->_serverSetting[key] = value;
-}
-
-
-void Parser::_getLocationSetting(char &currentChar)
-{
-    std::cout << "4-need get location\n";
 }
 
 bool Parser::_skipSpacesAndComments(char &currentChar) 
