@@ -96,6 +96,7 @@ public:
 	std::vector<ServerConfig> servers;
 
 	void	addConfigToServers(RawSetting serverSetting, std::map<std::string, RawSetting>locations);
+	void	addLocationToRoutes(ServerConfig &server, std::map<std::string, RawSetting>locations);
 	void	addServer(ServerConfig&& server);
-	void	addRoute(RouteConfig&& route,int i);
+	//void	addRoute(RouteConfig&& route,int i);
 };

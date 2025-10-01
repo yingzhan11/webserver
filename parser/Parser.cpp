@@ -78,8 +78,7 @@ void Parser::_initValidKeywords()
     _validKeywords.insert("upload_to");
     _validKeywords.insert("autoindex");
     _validKeywords.insert("return");
-
-    // _validKeywords.insert("try_file");
+    _validKeywords.insert("try_file");
 }
 
 /**
@@ -114,6 +113,7 @@ void Parser::_parseServerSetting(std::string &token, char &currentChar)
         throw std::runtime_error("2-Error: Conf block must start with \"server\".");
     
     this->_serverSetting.clear();
+    this->_locations.clear();
     while (token != "}" && token != "END")
     {
         //不是server就获取config
@@ -123,7 +123,6 @@ void Parser::_parseServerSetting(std::string &token, char &currentChar)
         if (token == "location")
         {
             //TODO
-            //this->_locationSetting.clear();
             this->_locations.insert(_getLocationSetting(currentChar));
 
         }
@@ -164,6 +163,7 @@ std::pair<std::string, RawSetting> Parser::_getLocationSetting(char &currentChar
         _getSetting(token, currentChar, locationSetting);
         token = _checkNextToken(currentChar);
     }
+    //fill location structure here or in config? TODO
     return (std::make_pair(locationTitle, locationSetting));
 }
 

@@ -38,57 +38,81 @@ Config& Config::getinstance()
 	return instance;
 }
 
-
-
-//private
+//p
 void Config::addConfigToServers(RawSetting serverSetting, std::map<std::string, RawSetting>locations)
 {
 	//TODO需要修改，保存多个value的情况
 	//todo 需要检查parser的结果
 
 	ServerConfig server;
-	RawSetting settings = serverSetting;
-	RawSetting::iterator it;
-	for (it = settings.begin(); it != settings.end(); ++it) 
-	{
-		if (it->first == "server_name") {
-			server.server_name = it->second;
-		}
-		else if (it->first == "listen") {
-			int port = std::stoi(it->second);
-			server.ports.push_back(port);
-		}
-		else if (it->first == "host") {
-			server.ip = it->second;
-		}
-		else if (it->first == "root") {
-			server.root_directory = it->second;
-		}
-		else if (it->first == "index") {
-			server.default_file = it->second;
-		}
-		else if (it->first == "client_body_size") {
-			std::string sizeStr = it->second;
-			// Convert sizeStr to size_t, assuming it's in bytes for simplicity
-			server.client_body_size = static_cast<size_t>(std::stoul(sizeStr));
-		}
-		else if (it->first == "error_page") {
-			std::string errorPage = it->second;
-			// Assuming error pages are named like "404.html"
-			int errorCode = std::stoi(errorPage.substr(0, errorPage.find('.')));
-			server.error_pages[errorCode] = errorPage;
-		}
-	}
+	//RouteConfig route;
+
+	
+	//check server setting TODO
+	//check location
+
+	//add location to server
+	addLocationToRoutes(server, locations);
+
+	//add setting to server
+	server.server_name = serverSetting["server_name"]; // check unique name
+	server.ports.push_back(std::stoi((serverSetting["listen"])));
+	server.ip = serverSetting["host"];
+	server.root_directory = serverSetting["root"];
+	server.default_file = serverSetting["index"];
+	std::string sizeStr = serverSetting["client_body_size"];
+	server.client_body_size = static_cast<size_t>(std::stoul(sizeStr));
+	std::string errorPage = serverSetting["error_page"];
+	int errorCode = std::stoi(errorPage.substr(0, errorPage.find('.')));
+	server.error_pages[errorCode] = errorPage;
+
 	this->addServer(std::move(server));
 }
 
+void Config::addLocationToRoutes(ServerConfig &server, std::map<std::string, RawSetting>locations)
+{
+	//RouteConfig route;
+	
+	//route.path = "here is location test";
+	//add value in lactions into route
+	std::map<std::string, RawSetting>::iterator it = locations.begin();
+
+	for (; it != locations.end(); ++it)
+	{
+		RouteConfig route;
+
+		route.path = it->first;
+
+		if (it->second.find("allow_methods") != it->second.end())
+		{
+			std::string methods = it->second.at("allow_methods");
+			std::istringstream ss(methods);
+			std::string method;
+			while (ss >> method)
+				route.allowed_methods.push_back(method);
+		}
+		if (it->second.find("return") != it->second.end())
+			route.redirect = it->second.at("return");
+		if (it->second.find("root") != it->second.end())
+			route.root_directory = it->second.at("root");
+		if (it->second.find("autoindex") != it->second.end())
+			route.directory_listing = it->second.at("autoindex") == "on";
+		if (it->second.find("try_file") != it->second.end())
+			route.index_file = it->second.at("try_file");
+		if (it->second.find("cgi_ext") != it->second.end())
+			route.cgi_extensions.push_back(it->second.at("cgi_ext"));
+		if (it->second.find("cgi_path") != it->second.end())
+			route.cgi_interpreters.push_back(it->second.at("cgi_path"));
+		server.routes.push_back(std::move(route));
+	}
+}
 
 void	Config::addServer(ServerConfig&& server)
 {
 	this->servers.push_back(std::move(server));
 }
 
-void	Config::addRoute(RouteConfig&& route,int i)
-{
-	this->servers[i].routes.push_back(std::move(route));
-}
+//void	Config::addRoute(RouteConfig&& route,int i)
+//{
+//	this->servers[i].routes.push_back(std::move(route));
+//}

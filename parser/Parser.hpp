@@ -20,8 +20,6 @@ class Parser
         bool  _foundServer;
 
         RawSetting _serverSetting;
-        //RawSetting _locationSetting;
-        //std::pair<std::string, RawSetting> _locations;
         std::map<std::string, RawSetting> _locations;
 
         void _isValidInput(int ac, char **av);
