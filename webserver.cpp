@@ -35,24 +35,24 @@ void webserver::eventlisten()
 		for (int port : server.ports)
 		{
 			std::string ipport = server.ip + ":" + std::to_string(port);
-			// std::cout << "Iport:" << ipport << std::endl;
+			std::cout << "Iport:" << ipport << std::endl;
 			if (!server.ip.empty())
 			{
 				if (boundIPs[port].count(server.ip))
 				{
-					// std::cout << server.ip << ":" << port << " Aready bound.Move to next!" << std::endl;
+					std::cout << server.ip << ":" << port << " Aready bound.Move to next!" << std::endl;
 					CurrentIpMemberServer[listenfd[ipport]].insert(server);
-					// std::cout << "---------------------------------fd:" << listenfd[ipport] << std::endl
-					// 		  << std::endl;
+					std::cout << "---------------------------------fd:" << listenfd[ipport] << std::endl
+							  << std::endl;
 					continue;
 				}
 				int socket = createListenSocket(server.ip.c_str(), port, &boundIPs);
 				listenfd[ipport] = socket;
-				// std::cout << "listenfd:" << socket << "  server:" << server.server_name << std::endl
-				//  << std::endl;
+				std::cout << "listenfd:" << socket << "  server:" << server.server_name << std::endl
+				 << std::endl;
 				CurrentIpMemberServer[socket].insert(server);
-				// std::cout << "---------------------------------fd:" << socket << std::endl
-				// 		  << std::endl;
+				std::cout << "---------------------------------fd:" << socket << std::endl
+						  << std::endl;
 			}
 			else
 			{
@@ -96,15 +96,15 @@ void webserver::eventlisten()
 			}
 		}
 	}
-	// for (auto it = CurrentIpMemberServer.begin(); it != CurrentIpMemberServer.end(); ++it)
-	// {
-	// 	int fd = it->first;
-	// 	const std::unordered_set<ServerConfig> &serverSet = it->second;
+	for (auto it = CurrentIpMemberServer.begin(); it != CurrentIpMemberServer.end(); ++it)
+	{
+		int fd = it->first;
+		const std::unordered_set<ServerConfig> &serverSet = it->second;
 
-	// 	std::cout << "Socket FD: " << fd << " -> Servers:\n";
-	// 	for (const ServerConfig &server : serverSet)
-	// 		std::cout << server.server_name << "\n";
-	// }
+		std::cout << "Socket FD: " << fd << " -> Servers:\n";
+		for (const ServerConfig &server : serverSet)
+			std::cout << server.server_name << "\n";
+	}
 	epollrigster();
 }
 
@@ -145,7 +145,7 @@ bool webserver::dealclientdata(int sockfd)
 	if (0 == w_trimode) // LT
 	{
 		int connfd = accept(sockfd, (struct sockaddr *)&client_add, &client_addrlength);
-		{
+		{	std::cout << "[dealclientdata] accep1t11 new fd=" << connfd << std::endl;
 			if (connfd < 0)
 			{
 				perror("accept error");
@@ -169,6 +169,8 @@ bool webserver::dealclientdata(int sockfd)
 		while (1)
 		{
 			int connfd = accept(sockfd, (struct sockaddr *)&client_add, &client_addrlength);
+			std::cout << "[dealclientdata] accept new fd=" << connfd << std::endl;
+
 			if (connfd < 0)
 			{
 				if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -245,7 +247,7 @@ void webserver::dealwithwrite(int sockfd)
 {
 	std::cout << "write\n"
 			  << std::endl;
-	w_pool->append(users + sockfd, 0);
+	w_pool->append(users + sockfd, 1);
 	while (true)
 	{
 		if (1 == users[sockfd].improv)
@@ -313,6 +315,7 @@ std::vector<std::string> checkifaddr()
 			char ip[INET_ADDRSTRLEN];
 			struct sockaddr_in *sa = reinterpret_cast<struct sockaddr_in *>(ifa->ifa_addr);
 			inet_ntop(AF_INET, &(sa->sin_addr), ip, INET_ADDRSTRLEN);
+
 			ipset.push_back(ip);
 		}
 	}

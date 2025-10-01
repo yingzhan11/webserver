@@ -85,9 +85,10 @@ void *threadpool<T>::worker(void *arg)
 }
 template <typename T>
 void	threadpool<T>::run()
-{
+{  std::cout << "=========sss===========\n";
 	while(true)
 	{
+
 		w_queuestas.wait();
 		w_queuelocker.lock();
 		if(w_queue.empty())
@@ -100,8 +101,9 @@ void	threadpool<T>::run()
 		w_queuelocker.unlock();
 		if (!request)
 			continue ;
+		
 		if(0 == request->w_state)
-		{
+		{   
 			if (request->read_once())
 			{
 
@@ -115,7 +117,7 @@ void	threadpool<T>::run()
 			}
 		}
 		else
-		{
+		{std::cout << "======wwwww==============\n";
 			if(request->write())
 				request->improv = 1;
 			else
