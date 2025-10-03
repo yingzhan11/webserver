@@ -31,7 +31,8 @@ void printConfig(Config &Config)
 	for (size_t i = 0; i < Config.servers.size(); ++i)
 	{
 		std::cout << "Server " << i + 1 << ": " << Config.servers[i].server_name << " on ports: ";
-		for (size_t j = 0; j < Config.servers[i].ports.size(); ++j) {
+		std::cout<< "ports nbr: " << Config.servers[i].ports.size() << std::endl;
+		for (size_t j = 0; j < Config.servers[i].ports.size(); j++) {
 			std::cout << Config.servers[i].ports[j];
 			if (j < Config.servers[i].ports.size() - 1)
 				std::cout << ", ";
@@ -41,8 +42,9 @@ void printConfig(Config &Config)
 		std::cout << " and client body size: " << Config.servers[i].client_body_size;
 		std::cout << " and error pages: ";
 		for (std::unordered_map<int, std::string>::iterator it = Config.servers[i].error_pages.begin(); it != Config.servers[i].error_pages.end(); ++it) {
-			std::cout << it->first << "->" << it->second << "\n";
+			std::cout << it->first << "->" << it->second << " ";
 		}
+		std::cout << std::endl;
 
 		std::vector<RouteConfig> routes = Config.servers[i].routes;
 		for (size_t j = 0; j < routes.size(); ++j)

@@ -31,55 +31,58 @@ Config::Config()
 
 Config::~Config(){}
 
-//public
 Config& Config::getinstance()
 {
  	static Config instance;
 	return instance;
 }
 
-//p
+/**
+ * main funcs
+ */
+//add setting and location into server, and add server into servers
 void Config::addConfigToServers(RawSetting serverSetting, std::map<std::string, RawSetting>locations)
 {
-	//todo 需要检查
-
 	ServerConfig server;
-	//RouteConfig route;
 
-	
-	//check server setting TODO
-	//check location
+	//check server setting
+	_checkServerSettingKeyword(serverSetting);
+	//check location??? TODO
 
 	//add location to server
-	addLocationToRoutes(server, locations);
+	_addLocationToRoutes(server, locations);
 
-	//add setting to server
-	server.server_name = serverSetting["server_name"]; // check unique name
-	server.ports.push_back(std::stoi((serverSetting["listen"])));
-	server.ip = serverSetting["host"];
+	//add server name
+	server.server_name = _checkServerName(serverSetting["server_name"]); // check unique name
+	//add ports into server
+	server.ports = _checkPorts(serverSetting["listen"]);
+	//add host
+	if (serverSetting["host"] == "localhost")
+		server.ip = "127.0.0.1";
+	else
+		server.ip = serverSetting["host"];
+	// add root dir
+	if (!_checkRoot(serverSetting["root"]))
+        throw std::runtime_error("Didn't find the root directory '" + serverSetting["root"] + "'");
 	server.root_directory = serverSetting["root"];
-	server.default_file = serverSetting["index"];
-	std::string sizeStr = serverSetting["client_body_size"];
-	server.client_body_size = static_cast<size_t>(std::stoul(sizeStr));
-	std::string errorPage = serverSetting["error_page"];
-	int errorCode = std::stoi(errorPage.substr(0, errorPage.find('.')));
-	server.error_pages[errorCode] = errorPage;
+	// add index page
+	server.default_file = _checkPage(server.root_directory, serverSetting["index"]);
+	//serval error page, if no error page, use default error page?
+	server.error_pages = _parseErrorPage(server.root_directory, serverSetting["error_page"]);
+	//dadd body size
+	server.client_body_size = _checkClientBodySize(serverSetting["client_body_size"]);
 
-	this->addServer(std::move(server));
+	this->_addServer(std::move(server));
 }
 
-void Config::addLocationToRoutes(ServerConfig &server, std::map<std::string, RawSetting>locations)
+//add value in lactions into route
+void Config::_addLocationToRoutes(ServerConfig &server, std::map<std::string, RawSetting>locations)
 {
-	//RouteConfig route;
-	
-	//route.path = "here is location test";
-	//add value in lactions into route
 	std::map<std::string, RawSetting>::iterator it = locations.begin();
 
 	for (; it != locations.end(); ++it)
 	{
 		RouteConfig route;
-
 		route.path = it->first;
 
 		if (it->second.find("allow_methods") != it->second.end())
@@ -110,10 +113,138 @@ void Config::addLocationToRoutes(ServerConfig &server, std::map<std::string, Raw
 	}
 }
 
-void	Config::addServer(ServerConfig&& server)
+
+void	Config::_addServer(ServerConfig&& server)
 {
 	this->servers.push_back(std::move(server));
 }
+
+/**
+ * chckers
+ */
+void Config::_checkServerSettingKeyword(RawSetting &serverSetting)
+{
+	std::string const mandatory[] = {"host", "index", "listen", "root", "client_body_size"};
+	std::string const forbidden[] = {"allow_methods", "autoindex", "cgi_ext", "cgi_path", "try_file", "upload_to"};
+
+	//check if all mandatory key is here
+	for (int i = 0; i < 5; i++)
+	{
+		if (serverSetting.find(mandatory[i]) == serverSetting.end())
+			throw std::runtime_error("Error: Server lacks keyword '" + mandatory[i] + "'.");
+	}
+	//check if there is any forbidden key in server out of location? need this?? TODO
+	for (int i = 0; i < 6; i++)
+	{
+		if (serverSetting.find(forbidden[i]) != serverSetting.end())
+			throw std::runtime_error("Error: Server has forbidden keyword '" + forbidden[i] + "'.");
+	}	
+}
+
+std::string Config::_checkServerName(std::string const &name)
+{
+	//check is there any servers name are same
+	std::vector<ServerConfig>::const_iterator it;
+	
+	for (it = this->servers.begin(); it != this->servers.end(); it++)
+	{
+		if (!name.empty() && it->server_name == name)
+			throw std::runtime_error("Error: Same server name");
+	}
+	return (name);
+}
+
+std::vector<int> Config::_checkPorts(std::string const &portStr)
+{
+	//check port number
+	int portNbr = atoi(portStr.c_str());
+	// port nbr should greater than 1024??? TODO
+	if (portStr.find_first_not_of(" 0123456789") != std::string::npos || portNbr < 0 || portNbr > 65535)
+		throw std::runtime_error("Invalid port number: " + portStr);
+	
+	std::istringstream iss(portStr);
+	int port;
+	std::vector<int> ports;
+	while (iss >> port) {
+		ports.push_back(port);
+	}
+	return ports;
+}
+
+bool Config::_checkRoot(std::string const &path)
+{
+	struct stat info;
+
+	if (stat(path.c_str(), &info) != 0)
+		return false;
+	else if (info.st_mode & S_IFDIR)
+		return true;
+	return false;
+}
+
+std::string Config::_checkPage(std::string const &root, std::string const &page)
+{
+	if (!page.empty())
+	{
+		size_t find_dot = page.find_last_of(".");
+
+		if (find_dot == std::string::npos || page.substr(find_dot) != ".html" || page.length() <= std::string(".html").length())
+			throw std::runtime_error("index page must be end by '.html'");
+		//std::string path
+		std::string path = root + "/" + page;
+		std::ifstream file(path.c_str());
+		if (!file.good())
+			throw std::runtime_error("Page not exist or cannot be opened '" + page + "'");
+		file.close();
+	}
+	return page;
+}
+
+size_t	Config::_checkClientBodySize(std::string const &size)
+{
+	std::string nbrStr;
+	std::string unit;
+	double value = 0.0;
+
+	if (isdigit(size[size.length() - 1]))
+		nbrStr = size;
+	else
+	{
+		nbrStr = size.substr(0, size.length() - 1);
+		unit = size.substr(size.length() - 1, 1);
+	}
+	if ((!unit.empty() && unit.find_first_not_of("bBkKmMgG") != std::string::npos) || nbrStr.find_first_not_of("0123456789.") != std::string::npos)
+		throw std::runtime_error("Invaid client body size '" + size + "'");
+
+	value = atof(nbrStr.c_str());
+	if (unit == "k" || unit == "K")
+		value *= 1024;
+	else if (unit == "m" || unit == "M")
+		value *= 1024 * 1024;
+	else if (unit == "g" || unit == "G")
+		value *= 1024 * 1024 *1024;
+	if (value > MAX_SIZE_LIMIT)
+		throw std::runtime_error("Clinet body size '" + size +"' is invalid");
+
+	return static_cast<size_t>(value);
+}
+
+std::unordered_map<int, std::string> Config::_parseErrorPage(std::string const &root, std::string const &pages)
+{
+	std::unordered_map<int, std::string> errorPages;
+	std::istringstream iss(pages);
+	std::string page;
+
+	while (iss >> page) {
+		int errorCode = std::stoi(page.substr(0, page.find('.')));
+		if (errorCode < 100 || errorCode > 599)
+    		throw std::runtime_error("Invalid HTTP error code in file: " + page);
+		std::string validPage = _checkPage(root, page);
+		errorPages[errorCode] = validPage;
+	}
+	return errorPages;
+}
+
 
 //void	Config::addRoute(RouteConfig&& route,int i)
 //{
