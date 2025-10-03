@@ -108,9 +108,6 @@ void Config::_addLocationToRoutes(ServerConfig &server, std::map<std::string, Ra
 	}
 }
 
-
-
-
 /**
  * chckers
  */
@@ -153,8 +150,10 @@ std::vector<int> Config::_checkPorts(std::string const &portStr)
 	// port nbr should greater than 1024??? TODO
 	if (portStr.find_first_not_of(" 0123456789") != std::string::npos || portNbr < 0 || portNbr > 65535)
 		throw std::runtime_error("Invalid port number: " + portStr);
+	if (portNbr <= 1024)
+		throw std::runtime_error("Port number must be > 1024 (privileged ports not allowed): " + portStr);
 	
-	std::istringstream iss(portStr);
+		std::istringstream iss(portStr);
 	int port;
 	std::vector<int> ports;
 	while (iss >> port) {
