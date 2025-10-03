@@ -115,7 +115,15 @@ bool http_request::read_once()
             }
 			w_read_idx += bytes_read;
 		}
-		std::cout <<"readonce:      "<< std::string(w_read_buf, w_read_idx);
+		for (int i = 0; i < w_read_idx; i++) {
+    unsigned char c = w_read_buf[i];
+    if (c == '\r') std::cout << "\\r";
+    else if (c == '\n') std::cout << "\\n";
+    else std::cout << c;
+}
+std::cout << std::endl;
+
+
 		return true;
 	}
 }
@@ -140,31 +148,42 @@ http_request::LINE_STATUS http_request::parse_line()
     for (; w_checked_idx < w_read_idx; ++w_checked_idx)
     {
         temp = w_read_buf[w_checked_idx];
+
         if (temp == '\r')
         {
+           
             if ((w_checked_idx + 1) == w_read_idx)
                 return LINE_OPEN;
-            else if (w_read_buf[w_checked_idx + 1] == '\n')
+
+       
+            if (w_read_buf[w_checked_idx + 1] == '\n')
             {
-                w_read_buf[w_checked_idx++] = '\0';
-                w_read_buf[w_checked_idx++] = '\0';
+                w_read_buf[w_checked_idx] = '\0';    
+                w_checked_idx += 2;                  
                 return LINE_OK;
             }
+
+         
             return LINE_BAD;
         }
         else if (temp == '\n')
         {
-            if (w_checked_idx > 1 && w_read_buf[w_checked_idx - 1] == '\r')
+          
+            if (w_checked_idx > 0 && w_read_buf[w_checked_idx - 1] == '\r')
             {
-                w_read_buf[w_checked_idx - 1] = '\0';
-                w_read_buf[w_checked_idx++] = '\0';
+                w_read_buf[w_checked_idx - 1] = '\0'; 
+                w_checked_idx++;
                 return LINE_OK;
             }
+         
             return LINE_BAD;
         }
     }
+
+    // 数据还没读完
     return LINE_OPEN;
 }
+
 http_request::HTTP_CODE http_request::parse_request_line(char *text)
 {
 	static int i =0;
@@ -208,7 +227,7 @@ http_request::HTTP_CODE http_request::parse_request_line(char *text)
         return BAD_REQUEST;
     //当url为/时，显示判断界面
     if (strlen(w_url) == 1)
-        strcat(w_url, "judge.html");
+        strcat(w_url, "index.html");
     w_check_state = CHECK_STATE_HEADER;
     return NO_REQUEST;
 }
@@ -259,11 +278,48 @@ http_request::HTTP_CODE http_request::parse_content(char *text)
 }
 http_request::HTTP_CODE http_request::do_request()
 {
-	//cgi
-	  return FILE_REQUEST;
+    // 默认根目录
+    std::string root = "/home/yan/webserver/site1";
+    if (serverconfig && !serverconfig->empty()) {
+        const ServerConfig &cfg = *(serverconfig->begin());
+        if (!cfg.root_directory.empty()) {
+            root = cfg.root_directory;
+        }
+    }
+
+    // 拼接真实文件路径
+    if (!w_url || w_url[0] == '\0' || strcmp(w_url, "/") == 0) {
+        snprintf(w_real_file, FILENAME_LEN, "%s/index.html", root.c_str());
+    } else {
+        snprintf(w_real_file, FILENAME_LEN, "%s%s", root.c_str(), w_url);
+    }
+
+    printf("[do_request] real_file = %s\n", w_real_file);
+
+    if (stat(w_real_file, &w_file_stat) < 0)
+        return NO_RESOURCE;
+
+    if (!(w_file_stat.st_mode & S_IROTH))
+        return FORBIDDEN_REQUEST;
+
+    if (S_ISDIR(w_file_stat.st_mode))  // 如果还是目录，直接返回 BAD_REQUEST
+        return BAD_REQUEST;
+
+    int fd = open(w_real_file, O_RDONLY);
+    if (fd < 0)
+        return NO_RESOURCE;
+
+    w_file_address = (char *)mmap(0, w_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    close(fd);
+
+    return FILE_REQUEST;
 }
+
+
+
 http_request::HTTP_CODE http_request::process_read()
 {
+      std::cout << "11111" <<std::endl;
  LINE_STATUS line_status = LINE_OK;
     HTTP_CODE ret = NO_REQUEST;
     char *text = 0;
@@ -271,6 +327,7 @@ http_request::HTTP_CODE http_request::process_read()
     while ((w_check_state == CHECK_STATE_CONTENT && line_status == LINE_OK) || ((line_status = parse_line()) == LINE_OK))
     {
         text = get_line();
+        std::cout << text <<std::endl;
 		w_start_line = w_checked_idx;
 
         switch (w_check_state)
@@ -482,17 +539,17 @@ bool http_request::process_write(http_request::HTTP_CODE ret)
 void http_request::process()
 {
 
-	//   std::cout << "=== serverconfig ===\n";
-    // for (const auto &server : *serverconfig) {
-    //     std::cout << "Server: " << server.server_name
-    //               << ", IP: " << server.ip
-    //               << ", Ports: ";
-    //     for (int port : server.ports) {
-    //         std::cout << port << " ";
-    //     }
-    //     std::cout << std::endl;
-    // }
-    // std::cout << "====================\n";
+	  std::cout << "=== serverconfig ===\n";
+    for (const auto &server : *serverconfig) {
+        std::cout << "Server: " << server.server_name
+                  << ", IP: " << server.ip
+                  << ", Ports: ";
+        for (int port : server.ports) {
+            std::cout << port << " ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << "====================\n";
 	HTTP_CODE read_ret = process_read();
 	    if (read_ret == NO_REQUEST)
 	    {
@@ -500,10 +557,10 @@ void http_request::process()
 	        modfd(w_epollfd, w_sockfd, EPOLLIN, w_TRIGMode);
 	        return;
 	    }
-    // bool write_ret = process_write(read_ret);
-    // if (!write_ret)
-    // {
-    //     close_conn();
-    // }
+    bool write_ret = process_write(read_ret);
+    if (!write_ret)
+    {
+        close_conn();
+    }
     modfd(w_epollfd, w_sockfd, EPOLLOUT, w_TRIGMode);
 }
