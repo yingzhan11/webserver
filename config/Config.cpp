@@ -51,28 +51,25 @@ void Config::addConfigToServers(RawSetting serverSetting, std::map<std::string, 
 
 	//add location to server
 	_addLocationToRoutes(server, locations);
-
 	//add server name
 	server.server_name = _checkServerName(serverSetting["server_name"]); // check unique name
 	//add ports into server
 	server.ports = _checkPorts(serverSetting["listen"]);
 	//add host
-	if (serverSetting["host"] == "localhost")
-		server.ip = "127.0.0.1";
-	else
-		server.ip = serverSetting["host"];
+	server.ip = _checkHost(serverSetting["host"]);
 	// add root dir
 	if (!_checkRoot(serverSetting["root"]))
         throw std::runtime_error("Didn't find the root directory '" + serverSetting["root"] + "'");
 	server.root_directory = serverSetting["root"];
 	// add index page
 	server.default_file = _checkPage(server.root_directory, serverSetting["index"]);
-	//serval error page, if no error page, use default error page?
+	//serval error page, if no error page, use default error page? TODO
 	server.error_pages = _parseErrorPage(server.root_directory, serverSetting["error_page"]);
 	//dadd body size
 	server.client_body_size = _checkClientBodySize(serverSetting["client_body_size"]);
 
-	this->_addServer(std::move(server));
+	//this->_addServer(std::move(server));
+	this->servers.push_back(std::move(server));
 }
 
 //add value in lactions into route
@@ -92,7 +89,6 @@ void Config::_addLocationToRoutes(ServerConfig &server, std::map<std::string, Ra
 			std::string method;
 			while (ss >> method)
 				route.allowed_methods.push_back(method);
-			//todo check if it is get post delete
 		}
 		if (it->second.find("return") != it->second.end())
 			route.redirect = it->second.at("return");
@@ -108,16 +104,15 @@ void Config::_addLocationToRoutes(ServerConfig &server, std::map<std::string, Ra
 		if (it->second.find("cgi_path") != it->second.end())
 			route.cgi_interpreters.push_back(it->second.at("cgi_path"));
 			//todo check is ther a /
-		//there is no upload to in routeconfig? TODO
+		if (it->second.find("upload_to") != it->second.end())
+			route.upload_to = it->second.at("upload_to");
+			//todo check is ther a /
 		server.routes.push_back(std::move(route));
 	}
 }
 
 
-void	Config::_addServer(ServerConfig&& server)
-{
-	this->servers.push_back(std::move(server));
-}
+
 
 /**
  * chckers
@@ -169,6 +164,20 @@ std::vector<int> Config::_checkPorts(std::string const &portStr)
 		ports.push_back(port);
 	}
 	return ports;
+}
+
+std::string Config::_checkHost(std::string const &host)
+{
+	std::string ip;
+
+	if (host == "localhost")
+		ip = "127.0.0.1";
+	else if (host.find_first_not_of(".0123456789") != std::string::npos)
+		throw std::runtime_error("Invalid port number: " + host);
+	else
+		ip = host;
+
+	return ip;
 }
 
 bool Config::_checkRoot(std::string const &path)
@@ -245,6 +254,10 @@ std::unordered_map<int, std::string> Config::_parseErrorPage(std::string const &
 	return errorPages;
 }
 
+//void	Config::_addServer(ServerConfig&& server)
+//{
+//	this->servers.push_back(std::move(server));
+//}
 
 //void	Config::addRoute(RouteConfig&& route,int i)
 //{

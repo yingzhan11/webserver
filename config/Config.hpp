@@ -92,12 +92,13 @@ private:
 	void	_addLocationToRoutes(ServerConfig &server, std::map<std::string, RawSetting>locations);
 	std::string	_checkServerName(std::string const &name);
 	std::vector<int>	_checkPorts(std::string const &portStr);
+	std::string	_checkHost(std::string const &host);
 	bool	_checkRoot(std::string const &path);
 	std::string	_checkPage(std::string const &root, std::string const &page);
 	size_t	_checkClientBodySize(std::string const &size);
 	std::unordered_map<int, std::string> _parseErrorPage(std::string const &root, std::string const &pages);
 		
-	void	_addServer(ServerConfig&& server);
+	//void	_addServer(ServerConfig&& server);
 
 public:
 	static Config &getinstance();

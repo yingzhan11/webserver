@@ -30,8 +30,8 @@ void printConfig(Config &Config)
 	std::cout << "Config initialized with " << Config.servers.size() << " servers." << std::endl;
 	for (size_t i = 0; i < Config.servers.size(); ++i)
 	{
-		std::cout << "Server " << i + 1 << ": " << Config.servers[i].server_name << " on ports: ";
-		std::cout<< "ports nbr: " << Config.servers[i].ports.size() << std::endl;
+		std::cout << "Server " << i + 1 << ": " << Config.servers[i].server_name << std::endl;
+		std::cout<< "ports amout: " << Config.servers[i].ports.size()  << " on ports: ";
 		for (size_t j = 0; j < Config.servers[i].ports.size(); j++) {
 			std::cout << Config.servers[i].ports[j];
 			if (j < Config.servers[i].ports.size() - 1)
@@ -90,6 +90,9 @@ void printConfig(Config &Config)
 				}
 				std::cout << "\n";
 			}
+
+			if (!route.upload_to.empty())
+				std::cout << "  Upload to: " << route.upload_to << "\n";
 
 			std::cout << "  Directory Listing: " 
 					<< (route.directory_listing ? "on" : "off") << "\n";
