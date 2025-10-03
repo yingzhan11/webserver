@@ -51,21 +51,18 @@ void Config::addConfigToServers(RawSetting serverSetting, std::map<std::string, 
 
 	//add location to server
 	_addLocationToRoutes(server, locations);
-	//add server name
+
 	server.server_name = _checkServerName(serverSetting["server_name"]); // check unique name
-	//add ports into server
 	server.ports = _checkPorts(serverSetting["listen"]);
-	//add host
 	server.ip = _checkHost(serverSetting["host"]);
-	// add root dir
+	
 	if (!_checkRoot(serverSetting["root"]))
         throw std::runtime_error("Didn't find the root directory '" + serverSetting["root"] + "'");
 	server.root_directory = serverSetting["root"];
-	// add index page
+
 	server.default_file = _checkPage(server.root_directory, serverSetting["index"]);
 	//serval error page, if no error page, use default error page? TODO
 	server.error_pages = _parseErrorPage(server.root_directory, serverSetting["error_page"]);
-	//dadd body size
 	server.client_body_size = _checkClientBodySize(serverSetting["client_body_size"]);
 
 	//this->_addServer(std::move(server));
