@@ -87,7 +87,6 @@ void Parser::_initValidKeywords()
 //开始解析文件
 void Parser::_startParsing()
 {
-    
     char currentChar = this->_configFileStream.get();
     // std::cout << "1-Initial char read: '" << currentChar << "'" << std::endl;
 
@@ -123,6 +122,7 @@ void Parser::_parseServerSetting(std::string &token, char &currentChar)
         if (token == "location")
         {
             //TODO
+            
             this->_locations.insert(_getLocationSetting(currentChar));
 
         }
@@ -194,14 +194,18 @@ void Parser::_getSetting(std::string const &key, char &currentChar, RawSetting &
         if (currentChar == '{')
             break;
         //todo 检查空格和location
-        if (std::isspace(currentChar) && key != "allow_methods" && key != "location")
-            throw std::runtime_error("Error: too many value in this key: " + key);
+        if (std::isspace(currentChar) && key != "error_page" && key != "allow_methods" && key != "location")
+            throw std::runtime_error("Too many value in this key: " + key);
         value += currentChar;
         currentChar = this->_configFileStream.get();
     }
     if (value.empty())
         throw std::runtime_error("4-Error: No value found for this key: " + key);
-    setting[key] = value;
+    //if there are multiple ports, add all of them in one key
+    if (key == "listen" && setting.find(key) != setting.end())
+        setting[key] += " " + value;
+    else
+        setting[key] = value;
 }
 
 /**

@@ -7,6 +7,9 @@
 #include <fstream>
 #include <sstream>
 #include <map>
+#include <sys/stat.h>
+
+#define MAX_SIZE_LIMIT		10737418240.0//TODO
 
 // struct RouteConfig
 // {
@@ -50,6 +53,7 @@ struct RouteConfig
 	std::string index_file;
 	std::vector<std::string> cgi_extensions;
 	std::vector<std::string> cgi_interpreters;
+	std::string upload_to;
 };
 
 struct ServerConfig
@@ -62,7 +66,7 @@ struct ServerConfig
 	std::string default_file;
 	std::unordered_map<int, std::string> error_pages;
 	size_t client_body_size; // 1MB
-	bool directory_listing;
+	bool directory_listing;  //??
 	std::vector<RouteConfig> routes;
 	bool operator==(const ServerConfig &other) const {
 	return  server_name == other.server_name;
@@ -84,7 +88,17 @@ private:
 	Config();
 	Config(int ac, char **av);
 
-	
+	void	_checkServerSettingKeyword(RawSetting &serverSetting);
+	void	_addLocationToRoutes(ServerConfig &server, std::map<std::string, RawSetting>locations);
+	std::string	_checkServerName(std::string const &name);
+	std::vector<int>	_checkPorts(std::string const &portStr);
+	std::string	_checkHost(std::string const &host);
+	bool	_checkRoot(std::string const &path);
+	std::string	_checkPage(std::string const &root, std::string const &page);
+	size_t	_checkClientBodySize(std::string const &size);
+	std::unordered_map<int, std::string> _parseErrorPage(std::string const &root, std::string const &pages);
+		
+	//void	_addServer(ServerConfig&& server);
 
 public:
 	static Config &getinstance();
@@ -96,7 +110,6 @@ public:
 	std::vector<ServerConfig> servers;
 
 	void	addConfigToServers(RawSetting serverSetting, std::map<std::string, RawSetting>locations);
-	void	addLocationToRoutes(ServerConfig &server, std::map<std::string, RawSetting>locations);
-	void	addServer(ServerConfig&& server);
+
 	//void	addRoute(RouteConfig&& route,int i);
-};
+	};
