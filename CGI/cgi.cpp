@@ -11,23 +11,6 @@ CGI::~CGI()
 }
 
 //----------------------------------------------------------------------------------
-void _handle_timeout(pid_t pid)
-{
-    kill(pid, SIGKILL);
-}
-
-time_t _nowTime()
-{
-    return (std::time(NULL));
-}
-
-bool _hasTimeOut(time_t start_time)
-{
-	const int timeout = 1;
-	return (_nowTime() - start_time > timeout);
-}
-
-
 std::map<int, std::string> initErrorMap()
 {
     std::map<int, std::string> m;
@@ -52,22 +35,8 @@ std::map<int, std::string> initErrorMap()
 	return m;
 }
 std::map<int, std::string> _errorHTML = initErrorMap();
-std::string _itoa(int n)
-{
-	std::stringstream ss;
-	ss << n;
-	return ss.str();
-}
-std::string _getTimeStamp(const char *format)
-{
-	time_t		now = _nowTime();
-	struct tm	tstruct;
-	char		buf[80];
 
-	tstruct = *localtime(&now); 
-	strftime(buf, sizeof(buf), format, &tstruct);
-	return (buf);
-}
+
 std::string _defaultErrorPages(int status, std::string subText)
 {
 	std::string statusDescrip = _errorHTML[status];
@@ -86,7 +55,7 @@ std::string _defaultErrorPages(int status, std::string subText)
 	"</head>\n"
 	"<body>\n"
 	"    <div class=\"container-top\">\n"
-	"        <h3 class=\"title\">Error " + _itoa(status) + ": " + statusDescrip + "</h3>\n"
+	"        <h3 class=\"title\">Error " + utils::itoa(status) + ": " + statusDescrip + "</h3>\n"
 	"        <p class=\"general-paragraph\">" + subText + " </p>\n"
 	"        <footer>\n"
 	"            <p>Copyright © 2024 Clara Franco & Ívany Pinheiro.</p>\n"
@@ -96,84 +65,18 @@ std::string _defaultErrorPages(int status, std::string subText)
 	"</html>\n";
 
 	std::string HTMLHeaders = 
-	"HTTP/1.1 " + _itoa(status) + " " + statusDescrip + "\n"
-	"Date: " + _getTimeStamp("%a, %d %b %Y %H:%M:%S GMT") + "\n" +
+	"HTTP/1.1 " + utils::itoa(status) + " " + statusDescrip + "\n"
+	"Date: " + utils::getTimeStamp("%a, %d %b %Y %H:%M:%S GMT") + "\n" +
 	"Server: Webserv/1.0.0 (Linux)\n" +
 	"Connection: keep-alive\n" +
 	"Content-Type: text/html; charset=utf-8\n" +
-	"Content-Length: " + _itoa(BodyPage.size()) + "\n\n";
+	"Content-Length: " + utils::itoa(BodyPage.size()) + "\n\n";
 
 	std::string HtmlErrorContent = HTMLHeaders + BodyPage;
 	return (HtmlErrorContent);
 }
+
 //----------------------------------------------------------------------------------------
-
-void CGI::execute()
-{
-    std::string tmp = ".inputFile";
-    FILE* inputFilePtr = NULL;
-    int inputFileFd;
-
-    // _exportEnvPath();
-    this->_env.push_back(NULL);
-    this->_args.push_back(const_cast<char*>("python3"));
-    this->_args.push_back(const_cast<char*>(this->_realFile.c_str()));
-    this->_args.push_back(const_cast<char*>(this->_uploadTo.c_str()));
-    this->_args.push_back(NULL);
-
-    // _setOutFile();
-    if ((this->_outFile = open("cgi.html", O_CREAT | O_WRONLY | O_TRUNC, 0644)) == -1)
-        throw std::runtime_error(_defaultErrorPages(500, "The server was unable to create output for the CGI to write to"));
-
-    if ((inputFileFd = _writeRequestToCGI(tmp, inputFilePtr)) == -1)
-        throw std::runtime_error(_defaultErrorPages(500, "The server was unable to write the request to the CGI"));
-
-    pid_t pid = fork();
-    if (pid == -1)
-		throw std::runtime_error(_defaultErrorPages(500, "The server was unable to open a child process for the CGI"));
-
-    if (pid == 0)
-    {
-        dup2(inputFileFd, STDIN_FILENO);
-		close(inputFileFd);
-
-        dup2(this->_outFile, STDOUT_FILENO);
-		close(this->_outFile);
-
-        std::string python3 = "/usr/bin/python3";
-
-        if (execve(python3.c_str(), &(this->_args[0]), &(this->_env[0])) == -1)
-			throw std::runtime_error(_defaultErrorPages(500, "The server was unable to execute the CGI"));
-		exit (1);
-    }
-    else
-    {
-        close(inputFileFd);
-		close(this->_outFile);
-
-        time_t start_time = _nowTime();
-        while (true)
-        {
-            pid_t result = waitpid(pid, &(this->_status), WNOHANG);
-            if (result < 0)
-				throw std::runtime_error(_defaultErrorPages(500, "The server detected an error while executing the CGI"));
-			else if (result == 0)
-			{
-				if (_hasTimeOut(start_time))
-				{
-					_handle_timeout(pid);
-                    // kill(pid, SIGKILL);
-					throw std::runtime_error(_defaultErrorPages(500, "timeout in cgi"));
-					break;
-				}
-			}
-            else
-                break;
-        }
-        
-    }
-}
-
 void CGI::setNewEnv(std::string key, std::string value)
 {
     if (!value.empty() && !key.empty())
@@ -186,7 +89,91 @@ void CGI::setNewEnv(std::string key, std::string value)
     }
 }
 
+void CGI::execute()
+{
+    std::string tmp = ".inputFile";
+	FILE* inputFilePtr = NULL;
+    int	 inputFileFD;
 
+    _exportEnvArgs();
+    // std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+    // for (size_t i = 0; i < _env.size(); ++i) {
+    //     if (_env[i])
+    //         std::cout << _env[i] << std::endl;
+    // }
+    // std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+
+    //设置outfile, inputFile
+    if ((this->_outFile = open("cgi.html", O_CREAT | O_WRONLY | O_TRUNC, 0644)) == -1)
+        throw std::runtime_error(_defaultErrorPages(500, "The server was unable to create output for the CGI to write to"));
+    if ((inputFileFD = _writeRequestToCGI(const_cast<std::string&>(tmp), inputFilePtr)) == -1)
+        throw std::runtime_error(_defaultErrorPages(500, "The server was unable to write the request to the CGI"));
+
+    //fork
+    pid_t pid = fork();
+    if (pid == -1)
+    {
+        // close(this->_outFile);
+        // close(inputFileFD);
+		throw std::runtime_error(_defaultErrorPages(500, "The server was unable to open a child process for the CGI"));
+    }
+    std::cout << "22222222222222222222222222222222222\n";
+    if (pid == 0)
+    {
+        dup2(inputFileFD, STDIN_FILENO);
+		close(inputFileFD);
+
+		dup2(this->_outFile, STDOUT_FILENO);
+		close(this->_outFile);
+
+        std::string python3 = "/usr/bin/python3";
+
+        // std::cout << "33333333333333333333333333333\n";
+        if (execve(python3.c_str(), &(this->_args[0]), &(this->_env[0])) == -1)
+			throw std::runtime_error(_defaultErrorPages(500, "The server was unable to execute the CGI"));
+		std::cout << "444444444444444444444444\n";
+        exit (1);
+    }
+    else
+    {
+        close(inputFileFD);
+		close(this->_outFile);
+
+        time_t start_time = utils::nowTime();
+        const int timeout = 5;
+        std::cout << "5555555555555555555555\n";
+        while (true)
+        {
+            pid_t result = waitpid(pid, &(this->_status), WNOHANG);
+            if (result < 0)
+				throw std::runtime_error(_defaultErrorPages(500, "The server detected an error while executing the CGI"));
+			else if (result == 0)
+			{
+				if (utils::nowTime() - start_time > timeout)
+				{
+					// _handle_timeout(pid);
+                    kill(pid, SIGKILL);
+                    // waitpid(pid, &(this->_status), 0);
+					throw std::runtime_error(_defaultErrorPages(500, "timeout in cgi"));
+					break;
+				}
+			}
+            else
+                break;
+        }
+        std::cout << "6666666666666666666666666\n";
+
+    }
+}
+
+void CGI::_exportEnvArgs()
+{
+	this->_env.push_back(NULL);
+	this->_args.push_back(const_cast<char*>("python3"));
+	this->_args.push_back(const_cast<char*>(this->_realFile.c_str()));
+	this->_args.push_back(const_cast<char*>(this->_uploadTo.c_str()));
+	this->_args.push_back(NULL);
+}
 
 int CGI::_writeRequestToCGI(std::string& fname, FILE*& filePtr)
 {

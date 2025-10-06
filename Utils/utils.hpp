@@ -19,6 +19,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <errno.h>
+#include <ctime>
+#include <sstream>
+
 class utils
 {
 private:
@@ -30,6 +33,10 @@ public:
 	void addsig(int sig,void(handler)(int),bool restart = true);
 	void show_error(int connfd, const char *info);
 	static void sig_handler(int sig);
+	static std::string itoa(int n);
+	static time_t nowTime();
+	static std::string getTimeStamp(const char *format);
+
 public:
 	static int *u_pipefd;
 	static int u_epollfd;

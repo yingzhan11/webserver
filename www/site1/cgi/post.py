@@ -115,17 +115,17 @@ html_content += """
 time_stamp = get_time_stamp()
 content_len = len(html_content.encode('utf-8'))
 
-response_headers = (
-    f"HTTP/1.1 {status}\r\n"
-    f"Date: {time_stamp}\r\n"
-    "Server: Webserv/1.0.0 (Linux)\r\n"
-    "Connection: keep-alive\r\n"
-    "Content-Type: text/html; charset=utf-8\r\n"
-    f"Content-Length: {content_len}\r\n"
-    "\r\n"
-)
+# response_headers = (
+#     f"HTTP/1.1 {status}\r\n"
+#     f"Date: {time_stamp}\r\n"
+#     "Server: Webserv/1.0.0 (Linux)\r\n"
+#     "Connection: keep-alive\r\n"
+#     "Content-Type: text/html; charset=utf-8\r\n"
+#     f"Content-Length: {content_len}\r\n"
+#     "\r\n"
+# )
 
-sys.stdout.write(response_headers)
+# sys.stdout.write(response_headers)
 sys.stdout.write(html_content)
 sys.stdout.flush()
 

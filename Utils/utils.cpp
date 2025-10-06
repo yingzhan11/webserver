@@ -57,3 +57,25 @@ void utils::sig_handler(int sig)
 
     errno = save_errno;
 }
+std::string utils::itoa(int n)
+{
+	std::stringstream ss;
+	ss << n;
+	return ss.str();
+}
+
+time_t utils::nowTime()
+{
+    return (std::time(NULL));
+}
+
+std::string utils::getTimeStamp(const char *format)
+{
+	time_t		now = nowTime();
+	struct tm	tstruct;
+	char		buf[80];
+
+	tstruct = *localtime(&now); 
+	strftime(buf, sizeof(buf), format, &tstruct);
+	return (buf);
+}

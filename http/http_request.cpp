@@ -287,8 +287,10 @@ http_request::HTTP_CODE http_request::parse_content(char *text)
 void http_request::_exportEnv(CGI &cgi)
 {
 	cgi.setNewEnv("GATEWAY_INTERFACE", "CGI/1.1");
-	cgi.setNewEnv("SERVER_PROTOCOL", w_version ? w_version : "HTTP/1.1");
-	cgi.setNewEnv("SERVER_SOFTWARE", "Webserv/1.0");
+	cgi.setNewEnv("SERVER_PROTOCOL", "HTTP/1.1");
+	cgi.setNewEnv("SERVER_SOFTWARE", "server");
+
+    cgi.setNewEnv("QUERY_STRING", "");
 
 	// cgi.setNewEnv("ROOT_FOLDER" , this->serverconfig.root_directory);
     // 当前服务器根目录（如果有 server 配置）
@@ -301,19 +303,20 @@ void http_request::_exportEnv(CGI &cgi)
         cgi.setNewEnv("ROOT_FOLDER", "");
     
 	cgi.setNewEnv("SCRIPT_FILENAME" , this->w_real_file);
+    cgi.setNewEnv("SCRIPT_NAME", this->w_url);
 
 	// cgi.setNewEnv("REQUEST_METHOD", this->_myRequest.getMethod());
-    // std::string method;
-    // switch (w_method)
-    // {
-    //     case http_request::GET: method = "GET"; break;
-    //     case http_request::POST: method = "POST"; break;
-    //     case http_request::PUT: method = "PUT"; break;
-    //     case http_request::DELETE: method = "DELETE"; break;
-    //     case http_request::HEAD: method = "HEAD"; break;
-    //     default: method = "UNKNOWN"; break;
-    // }
-    cgi.setNewEnv("REQUEST_METHOD", "GET");
+    std::string method;
+    switch (w_method)
+    {
+        case http_request::GET: method = "GET"; break;
+        case http_request::POST: method = "POST"; break;
+        case http_request::PUT: method = "PUT"; break;
+        case http_request::DELETE: method = "DELETE"; break;
+        case http_request::HEAD: method = "HEAD"; break;
+        default: method = "UNKNOWN"; break;
+    }
+    cgi.setNewEnv("REQUEST_METHOD", method);
 
 	// cgi.setNewEnv("CONTENT_TYPE" ,this->_myRequest.getHeadData()["Content-Type"]);
 	// cgi.setNewEnv("CONTENT_LENGTH", this->_myRequest.getHeadData()["Content-Length"]);
@@ -322,19 +325,23 @@ void http_request::_exportEnv(CGI &cgi)
     cgi.setNewEnv("CONTENT_LENGTH", std::to_string(w_content_length));
 
 	// cgi.setNewEnv("UPLOAD_PATH", this->_effectiveUpload);
-    cgi.setNewEnv("UPLOAD_PATH", "");
+    cgi.setNewEnv("UPLOAD_PATH", "www/site1/upload");
     
     // 内容类型（你现在没解析，所以留空）
-    cgi.setNewEnv("CONTENT_TYPE", "application/x-www-form-urlencoded");
+    if (method == "GET")
+        cgi.setNewEnv("CONTENT_TYPE", "");
+    else
+        cgi.setNewEnv("CONTENT_TYPE", "application/x-www-form-urlencoded");
 
     // Host 字段
+    cgi.setNewEnv("SERVER_NAME", w_host);
     cgi.setNewEnv("HTTP_HOST", w_host ? w_host : "");
 
     // payload（POST body）
     if (w_string)
     {
-        std::vector<char> w_payload(w_string, w_string + w_content_length);
-        cgi.setNewEnv("PAYLOAD", w_payload);
+        // std::vector<char> w_payload(w_string, w_string + w_content_length);
+        cgi.setNewEnv("PAYLOAD", w_string);
     }
     else
         cgi.setNewEnv("PAYLOAD", "");
@@ -370,16 +377,27 @@ http_request::HTTP_CODE http_request::do_request()
         cgi.execute();
         std::cout << "++++++++++++++++++++++++++cgi done+++++++++++++++" << std::endl;
 
+        // 读取 CGI 输出内容
+        std::ifstream outputFile("cgi.html");
+        if (!outputFile.is_open()) {
+            std::cerr << "[CGI] Cannot open CGI output file!" << std::endl;
+            return NO_RESOURCE;
+        }
+
+        std::string cgiOutput((std::istreambuf_iterator<char>(outputFile)),
+                            std::istreambuf_iterator<char>());
+        outputFile.close();
+
         // 把 cgi.html 映射为响应内容
-        // if (stat("cgi.html", &w_file_stat) < 0)
-        //     return NO_RESOURCE;
+        if (stat("cgi.html", &w_file_stat) < 0)
+            return NO_RESOURCE;
 
-        // int fd = open("cgi.html", O_RDONLY);
-        // if (fd < 0)
-        //     return NO_RESOURCE;
+        int fd = open("cgi.html", O_RDONLY);
+        if (fd < 0)
+            return NO_RESOURCE;
 
-        // w_file_address = (char *)mmap(0, w_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-        // close(fd);
+        w_file_address = (char *)mmap(0, w_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+        close(fd);
 
         return FILE_REQUEST;
     }
