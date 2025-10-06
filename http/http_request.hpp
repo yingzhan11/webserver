@@ -23,6 +23,8 @@
 #include <map>
 
 #include "../config/Config.hpp"
+#include "../CGI/cgi.hpp"
+
 class http_request
 {
 public:
@@ -83,18 +85,18 @@ private:
 	int w_write_idx;
 	CHECK_STATE w_check_state;
 	METHOD w_method;
-	char w_real_file[FILENAME_LEN];
+	char w_real_file[FILENAME_LEN]; //fullPath
 	char *w_url;
 	char *w_version;
 	char *w_host;
-	long w_content_length;
+	long w_content_length; //requestLength, & payload length
 	bool w_linger;
 	char *w_file_address;
 	struct stat w_file_stat;
 	struct iovec w_iv[2];
 	int w_iv_count;
-	int cgi;
-	char *w_string;
+	int is_cgi;
+	char *w_string; //payload
 	int bytes_to_send;
 	int bytes_have_send;
 
@@ -125,4 +127,6 @@ private:
     bool add_linger();
     bool add_blank_line();
 	void unmap();
+
+	void _exportEnv(CGI &cgi);
 };
