@@ -74,7 +74,7 @@ void http_request::initt()
     w_checked_idx = 0;
     w_read_idx = 0;
     w_write_idx = 0;
-    cgi = 0;
+    is_cgi = 0;
     w_state = 0;
 
     improv = 0;
@@ -195,11 +195,18 @@ http_request::HTTP_CODE http_request::parse_request_line(char *text)
     *w_url++ = '\0';
     char *method = text;
     if (strcasecmp(method, "GET") == 0)
+    {
         w_method = GET;
+        if (strstr(w_url, ".py") != nullptr)
+        {
+            is_cgi = 1;
+            std::cout << "++---+++++++++++url" << w_url << "+++++++" << std::endl;
+        }
+    }
     else if (strcasecmp(method, "POST") == 0)
     {
         w_method = POST;
-        cgi = 1;
+        is_cgi = 1;
     }
     else
         return BAD_REQUEST;
@@ -276,6 +283,63 @@ http_request::HTTP_CODE http_request::parse_content(char *text)
     }
     return NO_REQUEST;
 }
+
+void http_request::_exportEnv(CGI &cgi)
+{
+	cgi.setNewEnv("GATEWAY_INTERFACE", "CGI/1.1");
+	cgi.setNewEnv("SERVER_PROTOCOL", w_version ? w_version : "HTTP/1.1");
+	cgi.setNewEnv("SERVER_SOFTWARE", "Webserv/1.0");
+
+	// cgi.setNewEnv("ROOT_FOLDER" , this->serverconfig.root_directory);
+    // 当前服务器根目录（如果有 server 配置）
+    if (serverconfig && !serverconfig->empty())
+    {
+        const ServerConfig &conf = *(serverconfig->begin());
+        cgi.setNewEnv("ROOT_FOLDER", conf.root_directory);
+    }
+    else
+        cgi.setNewEnv("ROOT_FOLDER", "");
+    
+	cgi.setNewEnv("SCRIPT_FILENAME" , this->w_real_file);
+
+	// cgi.setNewEnv("REQUEST_METHOD", this->_myRequest.getMethod());
+    // std::string method;
+    // switch (w_method)
+    // {
+    //     case http_request::GET: method = "GET"; break;
+    //     case http_request::POST: method = "POST"; break;
+    //     case http_request::PUT: method = "PUT"; break;
+    //     case http_request::DELETE: method = "DELETE"; break;
+    //     case http_request::HEAD: method = "HEAD"; break;
+    //     default: method = "UNKNOWN"; break;
+    // }
+    cgi.setNewEnv("REQUEST_METHOD", "GET");
+
+	// cgi.setNewEnv("CONTENT_TYPE" ,this->_myRequest.getHeadData()["Content-Type"]);
+	// cgi.setNewEnv("CONTENT_LENGTH", this->_myRequest.getHeadData()["Content-Length"]);
+    
+    // 内容长度
+    cgi.setNewEnv("CONTENT_LENGTH", std::to_string(w_content_length));
+
+	// cgi.setNewEnv("UPLOAD_PATH", this->_effectiveUpload);
+    cgi.setNewEnv("UPLOAD_PATH", "");
+    
+    // 内容类型（你现在没解析，所以留空）
+    cgi.setNewEnv("CONTENT_TYPE", "application/x-www-form-urlencoded");
+
+    // Host 字段
+    cgi.setNewEnv("HTTP_HOST", w_host ? w_host : "");
+
+    // payload（POST body）
+    if (w_string)
+    {
+        std::vector<char> w_payload(w_string, w_string + w_content_length);
+        cgi.setNewEnv("PAYLOAD", w_payload);
+    }
+    else
+        cgi.setNewEnv("PAYLOAD", "");
+}
+
 http_request::HTTP_CODE http_request::do_request()
 {
     // 默认根目录
@@ -287,11 +351,37 @@ http_request::HTTP_CODE http_request::do_request()
         }
     }
 
-    std::cout << "[do_request] root = " << root << std::endl;
-    if (cgi == 1)
+    if (is_cgi == 1)
     {
-        std::cout << "++++++++++++++++++++++++++post cgi+++++++++++++++" << std::endl;
-        // return BAD_REQUEST;
+        std::cout << "++++++++++++++++++++++++++get cgi+++++++++++++++" << std::endl;
+        std::cout << "[CGI] root = " << root << std::endl;
+        std::cout << "[CGI] url = " << w_url << std::endl;
+        //获取cgi路径（读取location，或默认）TODO
+        snprintf(w_real_file, FILENAME_LEN, "%s/cgi%s", root.c_str(), w_url);
+        std::cout << "[CGI] wrf = " << w_real_file << std::endl;
+        //需要检查路径是否存在，不在要报错 TODO
+
+        std::vector<char> tmp;
+        CGI cgi(w_real_file, "", tmp, 0); //GET CGI
+
+        // this->_effectiveUpload = Utils::_getTimeStamp("%H:%M:%S");
+		_exportEnv(cgi);
+        std::cout << "++++++++++++++++++++++++++into cgi+++++++++++++++" << std::endl;
+        cgi.execute();
+        std::cout << "++++++++++++++++++++++++++cgi done+++++++++++++++" << std::endl;
+
+        // 把 cgi.html 映射为响应内容
+        // if (stat("cgi.html", &w_file_stat) < 0)
+        //     return NO_RESOURCE;
+
+        // int fd = open("cgi.html", O_RDONLY);
+        // if (fd < 0)
+        //     return NO_RESOURCE;
+
+        // w_file_address = (char *)mmap(0, w_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+        // close(fd);
+
+        return FILE_REQUEST;
     }
 
     // 拼接真实文件路径

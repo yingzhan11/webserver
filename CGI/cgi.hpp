@@ -14,7 +14,7 @@
 #include <fstream>
 #include <ctime>
 #include <vector>
-
+#include <map>
 class CGI
 {
     private:
@@ -30,7 +30,7 @@ class CGI
         std::vector<char*> _args;
 
         int    _writeRequestToCGI(std::string& fname, FILE*& filePtr);
-        bool _hasTimeOut(time_t start_time);
+        // bool _hasTimeOut(time_t start_time);
 
     public:
         CGI(std::string realFile, std::string uploadTo, std::vector<char> &payload, size_t requestLength);

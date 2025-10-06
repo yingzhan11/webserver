@@ -23,6 +23,8 @@
 #include <map>
 
 #include "../config/Config.hpp"
+#include "../CGI/cgi.hpp"
+
 class http_request
 {
 public:
@@ -93,7 +95,7 @@ private:
 	struct stat w_file_stat;
 	struct iovec w_iv[2];
 	int w_iv_count;
-	int cgi;
+	int is_cgi;
 	char *w_string; //payload
 	int bytes_to_send;
 	int bytes_have_send;
@@ -125,4 +127,6 @@ private:
     bool add_linger();
     bool add_blank_line();
 	void unmap();
+
+	void _exportEnv(CGI &cgi);
 };
