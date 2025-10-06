@@ -24,7 +24,7 @@ void addfd(int epollfd, int fd, bool one_shot, int TRIGMode)
 {
 	epoll_event event;
 	event.data.fd = fd;
-std::cout<<"addfd\n"<<epollfd<<std::endl;
+    // std::cout<<"addfd\n"<<epollfd<<std::endl;
 	if (1 == TRIGMode)
 		event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
 	else
@@ -117,11 +117,11 @@ bool http_request::read_once()
 		}
 		for (int i = 0; i < w_read_idx; i++) {
     unsigned char c = w_read_buf[i];
-    if (c == '\r') std::cout << "\\r";
-    else if (c == '\n') std::cout << "\\n";
-    else std::cout << c;
+    // if (c == '\r') std::cout << "\\r";
+    // else if (c == '\n') std::cout << "\\n";
+    // else std::cout << c;
 }
-std::cout << std::endl;
+// std::cout << std::endl;
 
 
 		return true;
@@ -287,6 +287,13 @@ http_request::HTTP_CODE http_request::do_request()
         }
     }
 
+    std::cout << "[do_request] root = " << root << std::endl;
+    if (cgi == 1)
+    {
+        std::cout << "++++++++++++++++++++++++++post cgi+++++++++++++++" << std::endl;
+        // return BAD_REQUEST;
+    }
+
     // 拼接真实文件路径
     if (!w_url || w_url[0] == '\0' || strcmp(w_url, "/") == 0) {
         snprintf(w_real_file, FILENAME_LEN, "%s/index.html", root.c_str());
@@ -319,40 +326,43 @@ http_request::HTTP_CODE http_request::do_request()
 
 http_request::HTTP_CODE http_request::process_read()
 {
-      std::cout << "11111" <<std::endl;
- LINE_STATUS line_status = LINE_OK;
+    // std::cout << "11111" <<std::endl;
+    LINE_STATUS line_status = LINE_OK;
     HTTP_CODE ret = NO_REQUEST;
     char *text = 0;
 
     while ((w_check_state == CHECK_STATE_CONTENT && line_status == LINE_OK) || ((line_status = parse_line()) == LINE_OK))
     {
         text = get_line();
-        std::cout << text <<std::endl;
+        // std::cout << text <<std::endl;
 		w_start_line = w_checked_idx;
 
         switch (w_check_state)
         {
         case CHECK_STATE_REQUESTLINE:
-        {	std::cout << "====header3===============\n";
+        {	
+            // std::cout << "====header3===============\n";
             ret = parse_request_line(text);
             if (ret == BAD_REQUEST)
                 return BAD_REQUEST;
             break;
         }
         case CHECK_STATE_HEADER:
-        {	std::cout << "====head1===============\n";
+        {	
+            // std::cout << "====head1===============\n";
             ret = parse_headers(text);
             if (ret == BAD_REQUEST)
                 return BAD_REQUEST;
             else if (ret == GET_REQUEST)
             {
-					std::cout << "====header2===============\n";
+					// std::cout << "====header2===============\n";
                 return do_request();
             }
             break;
         }
         case CHECK_STATE_CONTENT:
-        {	std::cout << "====header4===============\n";
+        {	
+            // std::cout << "====header4===============\n";
             ret = parse_content(text);
             if (ret == GET_REQUEST)
                 return do_request();
@@ -539,21 +549,21 @@ bool http_request::process_write(http_request::HTTP_CODE ret)
 void http_request::process()
 {
 
-	  std::cout << "=== serverconfig ===\n";
-    for (const auto &server : *serverconfig) {
-        std::cout << "Server: " << server.server_name
-                  << ", IP: " << server.ip
-                  << ", Ports: ";
-        for (int port : server.ports) {
-            std::cout << port << " ";
-        }
-        std::cout << std::endl;
-    }
-    std::cout << "====================\n";
+	//   std::cout << "=== serverconfig ===\n";
+    // for (const auto &server : *serverconfig) {
+    //     std::cout << "Server: " << server.server_name
+    //               << ", IP: " << server.ip
+    //               << ", Ports: ";
+    //     for (int port : server.ports) {
+    //         std::cout << port << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+    // std::cout << "====================\n";
 	HTTP_CODE read_ret = process_read();
 	    if (read_ret == NO_REQUEST)
 	    {
-			std::cout << "====NO===============\n";
+			// std::cout << "====NO===============\n";
 	        modfd(w_epollfd, w_sockfd, EPOLLIN, w_TRIGMode);
 	        return;
 	    }
