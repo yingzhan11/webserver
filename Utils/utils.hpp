@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <ctime>
 #include <sstream>
+#include <map>
 
 class utils
 {
@@ -40,5 +41,6 @@ public:
 public:
 	static int *u_pipefd;
 	static int u_epollfd;
+	static std::string _defaultErrorPages(int status, std::string subText);
 };
 

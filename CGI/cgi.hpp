@@ -18,6 +18,8 @@
 
 #include "../Utils/utils.hpp"
 
+//class utils;
+
 class CGI
 {
     private:

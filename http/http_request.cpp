@@ -116,14 +116,12 @@ bool http_request::read_once()
 			w_read_idx += bytes_read;
 		}
 		for (int i = 0; i < w_read_idx; i++) {
-    unsigned char c = w_read_buf[i];
-    // if (c == '\r') std::cout << "\\r";
-    // else if (c == '\n') std::cout << "\\n";
-    // else std::cout << c;
-}
-// std::cout << std::endl;
-
-
+            unsigned char c = w_read_buf[i];
+            // if (c == '\r') std::cout << "\\r";
+            // else if (c == '\n') std::cout << "\\n";
+            // else std::cout << c;
+        }
+        // std::cout << std::endl;
 		return true;
 	}
 }
@@ -197,6 +195,7 @@ http_request::HTTP_CODE http_request::parse_request_line(char *text)
     if (strcasecmp(method, "GET") == 0)
     {
         w_method = GET;
+        //TODO just for test
         if (strstr(w_url, ".py") != nullptr)
         {
             is_cgi = 1;
@@ -374,7 +373,14 @@ http_request::HTTP_CODE http_request::do_request()
         // this->_effectiveUpload = Utils::_getTimeStamp("%H:%M:%S");
 		_exportEnv(cgi);
         std::cout << "++++++++++++++++++++++++++into cgi+++++++++++++++" << std::endl;
-        cgi.execute();
+        try {
+            cgi.execute();
+        }
+        catch (const std::runtime_error& e) {
+            std::string err = e.what();
+            if (err == "500")
+                return INTERNAL_ERROR;
+        }
         std::cout << "++++++++++++++++++++++++++cgi done+++++++++++++++" << std::endl;
 
         // 读取 CGI 输出内容
@@ -429,8 +435,6 @@ http_request::HTTP_CODE http_request::do_request()
 
     return FILE_REQUEST;
 }
-
-
 
 http_request::HTTP_CODE http_request::process_read()
 {
@@ -561,9 +565,6 @@ bool http_request::add_response(const char *format, ...)
     }
     w_write_idx += len;
     va_end(arg_list);
-
-
-
     return true;
 }
 bool http_request::add_status_line(int status, const char *title)
@@ -597,57 +598,81 @@ bool http_request::add_content(const char *content)
 }
 bool http_request::process_write(http_request::HTTP_CODE ret)
 {
+    std::string defaultErrorPage;
     switch (ret)
     {
-    case INTERNAL_ERROR:
-    {
-        add_status_line(500, error_500_title);
-        add_headers(strlen(error_500_form));
-        if (!add_content(error_500_form))
-            return false;
-        break;
-    }
-    case BAD_REQUEST:
-    {
-        add_status_line(404, error_404_title);
-        add_headers(strlen(error_404_form));
-        if (!add_content(error_404_form))
-            return false;
-        break;
-    }
-    case FORBIDDEN_REQUEST:
-    {
-        add_status_line(403, error_403_title);
-        add_headers(strlen(error_403_form));
-        if (!add_content(error_403_form))
-            return false;
-        break;
-    }
-    case FILE_REQUEST:
-    {
-        add_status_line(200, ok_200_title);
-        if (w_file_stat.st_size != 0)
+        case INTERNAL_ERROR:
         {
-            add_headers(w_file_stat.st_size);
-            w_iv[0].iov_base = w_write_buf;
-            w_iv[0].iov_len = w_write_idx;
-            w_iv[1].iov_base = w_file_address;
-            w_iv[1].iov_len = w_file_stat.st_size;
-            w_iv_count = 2;
-            bytes_to_send = w_write_idx + w_file_stat.st_size;
-            return true;
+            //TODO need to check location whether there is error page, if not use this defaultErrorPage
+            defaultErrorPage = utils::_defaultErrorPages(500, error_500_form);
+            add_status_line(500, error_500_title);
+            //add_headers(defaultErrorPage.size());
+            //if (!add_content(defaultErrorPage.c_str()))
+            //    return false;
+            break;
         }
-        else
+        case BAD_REQUEST:
         {
-            const char *ok_string = "<html><body></body></html>";
-            add_headers(strlen(ok_string));
-            if (!add_content(ok_string))
-                return false;
+            defaultErrorPage = utils::_defaultErrorPages(404, error_404_form);
+            add_status_line(404, error_404_title);
+            //add_headers(strlen(error_404_form));
+            //if (!add_content(error_404_form))
+            //    return false;
+            break;
         }
+        case FORBIDDEN_REQUEST:
+        {
+            defaultErrorPage = utils::_defaultErrorPages(403, error_403_form);
+            add_status_line(403, error_403_title);
+            //add_headers(strlen(error_403_form));
+            //if (!add_content(error_403_form))
+            //    return false;
+            break;
+        }
+        case FILE_REQUEST:
+        {
+            if (is_cgi == 1)
+            {
+                // send CGI output as-is
+                w_iv[0].iov_base = w_file_address;
+                w_iv[0].iov_len = w_file_stat.st_size;
+                w_iv_count = 1;
+                bytes_to_send = w_file_stat.st_size;
+                return true;
+            }
+            else {
+                add_status_line(200, ok_200_title);
+                if (w_file_stat.st_size != 0)
+                {
+                    add_headers(w_file_stat.st_size);
+                    w_iv[0].iov_base = w_write_buf;
+                    w_iv[0].iov_len = w_write_idx;
+                    w_iv[1].iov_base = w_file_address;
+                    w_iv[1].iov_len = w_file_stat.st_size;
+                    w_iv_count = 2;
+                    bytes_to_send = w_write_idx + w_file_stat.st_size;
+                    return true;
+                }
+                else
+                {
+                    const char *ok_string = "<html><body></body></html>";
+                    add_headers(strlen(ok_string));
+                    if (!add_content(ok_string))
+                        return false;
+                }
+            }
+        }
+        default:
+            return false;
     }
-    default:
-        return false;
+
+    if (ret != FILE_REQUEST) {
+        add_headers(defaultErrorPage.size());
+        if (!add_content(defaultErrorPage.c_str()))
+            return false;
     }
+    
+
     w_iv[0].iov_base = w_write_buf;
     w_iv[0].iov_len = w_write_idx;
     w_iv_count = 1;

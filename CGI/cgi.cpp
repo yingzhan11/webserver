@@ -10,73 +10,6 @@ CGI::~CGI()
         delete[] _env[i];
 }
 
-//----------------------------------------------------------------------------------
-std::map<int, std::string> initErrorMap()
-{
-    std::map<int, std::string> m;
-
-	m[400] = "Bad Request";
-	m[401] = "Unauthorized";
-	m[403] = "Forbidden";
-	m[404] = "Not Found";
-	m[405] = "Method Not Allowed";
-	m[406] = "Not Acceptable";
-	m[408] = "Request Timeout";
-	m[409] = "Conflict";
-	m[411] = "Length Required";
-	m[413] = "Payload Too Large";
-	m[414] = "URI Too Long";
-	m[415] = "Unsupported Media Type";
-	m[500] = "Internal Server Error";
-	m[501] = "Not Implemented";
-	m[504] = "Gateway Timeout";
-	m[505] = "HTTP Version Not Supported";
-	m[508] = "Loop Detected";
-	return m;
-}
-std::map<int, std::string> _errorHTML = initErrorMap();
-
-
-std::string _defaultErrorPages(int status, std::string subText)
-{
-	std::string statusDescrip = _errorHTML[status];
-
-	std::string BodyPage = 
-	"<!DOCTYPE html>\n"
-	"<html lang=\"pt-BR\">\n"
-	"<head>\n"
-	"    <meta charset=\"UTF-8\">\n"
-	"    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1\">\n"
-	"    <link rel=\"canonical\" href=\"https://www.site1/index.html\" />\n"
-	"    <link rel=\"shortcut icon\" href=\"/favicon.ico\">\n"
-	"    <title>Error</title>\n"
-	"    <link rel=\"stylesheet\" href=\"/styles.css\">\n"
-	"    <link href=\"https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Major+Mono+Display&display=swap\" rel=\"stylesheet\">\n"
-	"</head>\n"
-	"<body>\n"
-	"    <div class=\"container-top\">\n"
-	"        <h3 class=\"title\">Error " + utils::itoa(status) + ": " + statusDescrip + "</h3>\n"
-	"        <p class=\"general-paragraph\">" + subText + " </p>\n"
-	"        <footer>\n"
-	"            <p>Copyright © 2024 Clara Franco & Ívany Pinheiro.</p>\n"
-	"        </footer>\n"
-	"    </div>\n"
-	"</body>\n"
-	"</html>\n";
-
-	std::string HTMLHeaders = 
-	"HTTP/1.1 " + utils::itoa(status) + " " + statusDescrip + "\n"
-	"Date: " + utils::getTimeStamp("%a, %d %b %Y %H:%M:%S GMT") + "\n" +
-	"Server: Webserv/1.0.0 (Linux)\n" +
-	"Connection: keep-alive\n" +
-	"Content-Type: text/html; charset=utf-8\n" +
-	"Content-Length: " + utils::itoa(BodyPage.size()) + "\n\n";
-
-	std::string HtmlErrorContent = HTMLHeaders + BodyPage;
-	return (HtmlErrorContent);
-}
-
-//----------------------------------------------------------------------------------------
 void CGI::setNewEnv(std::string key, std::string value)
 {
     if (!value.empty() && !key.empty())
@@ -102,21 +35,23 @@ void CGI::execute()
     //         std::cout << _env[i] << std::endl;
     // }
     // std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+    //throw std::runtime_error("500");
 
     //设置outfile, inputFile
     if ((this->_outFile = open("cgi.html", O_CREAT | O_WRONLY | O_TRUNC, 0644)) == -1)
-        throw std::runtime_error(_defaultErrorPages(500, "The server was unable to create output for the CGI to write to"));
+        throw std::runtime_error("500");
+        //throw std::runtime_error(utils::_defaultErrorPages(500, "The server was unable to create output for the CGI to write to"));
     if ((inputFileFD = _writeRequestToCGI(const_cast<std::string&>(tmp), inputFilePtr)) == -1)
-        throw std::runtime_error(_defaultErrorPages(500, "The server was unable to write the request to the CGI"));
+        throw std::runtime_error("500");
+        //throw std::runtime_error(utils::_defaultErrorPages(500, "The server was unable to write the request to the CGI"));
+
 
     //fork
     pid_t pid = fork();
     if (pid == -1)
-    {
-        // close(this->_outFile);
-        // close(inputFileFD);
-		throw std::runtime_error(_defaultErrorPages(500, "The server was unable to open a child process for the CGI"));
-    }
+        throw std::runtime_error("500");
+		//throw std::runtime_error(utils::_defaultErrorPages(500, "The server was unable to open a child process for the CGI"));
+
     std::cout << "22222222222222222222222222222222222\n";
     if (pid == 0)
     {
@@ -130,7 +65,8 @@ void CGI::execute()
 
         // std::cout << "33333333333333333333333333333\n";
         if (execve(python3.c_str(), &(this->_args[0]), &(this->_env[0])) == -1)
-			throw std::runtime_error(_defaultErrorPages(500, "The server was unable to execute the CGI"));
+            throw std::runtime_error("500");
+			//throw std::runtime_error(utils::_defaultErrorPages(500, "The server was unable to execute the CGI"));
 		std::cout << "444444444444444444444444\n";
         exit (1);
     }
@@ -140,21 +76,22 @@ void CGI::execute()
 		close(this->_outFile);
 
         time_t start_time = utils::nowTime();
-        const int timeout = 5;
+        const int timeout = 1;
         std::cout << "5555555555555555555555\n";
         while (true)
         {
             pid_t result = waitpid(pid, &(this->_status), WNOHANG);
             if (result < 0)
-				throw std::runtime_error(_defaultErrorPages(500, "The server detected an error while executing the CGI"));
+                throw std::runtime_error("500");
+				//throw std::runtime_error(utils::_defaultErrorPages(500, "The server detected an error while executing the CGI"));
 			else if (result == 0)
 			{
 				if (utils::nowTime() - start_time > timeout)
 				{
-					// _handle_timeout(pid);
                     kill(pid, SIGKILL);
                     // waitpid(pid, &(this->_status), 0);
-					throw std::runtime_error(_defaultErrorPages(500, "timeout in cgi"));
+                    throw std::runtime_error("500");
+					//throw std::runtime_error(utils::_defaultErrorPages(500, "timeout in cgi"));
 					break;
 				}
 			}
