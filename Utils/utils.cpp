@@ -57,3 +57,79 @@ void utils::sig_handler(int sig)
 
     errno = save_errno;
 }
+std::string utils::itoa(int n)
+{
+	std::stringstream ss;
+	ss << n;
+	return ss.str();
+}
+
+time_t utils::nowTime()
+{
+    return (std::time(NULL));
+}
+
+std::string utils::getTimeStamp(const char *format)
+{
+	time_t		now = nowTime();
+	struct tm	tstruct;
+	char		buf[80];
+
+	tstruct = *localtime(&now); 
+	strftime(buf, sizeof(buf), format, &tstruct);
+	return (buf);
+}
+
+std::map<int, std::string> initErrorMap()
+{
+    std::map<int, std::string> m;
+
+	m[400] = "Bad Request";
+	m[401] = "Unauthorized";
+	m[403] = "Forbidden";
+	m[404] = "Not Found";
+	m[405] = "Method Not Allowed";
+	m[406] = "Not Acceptable";
+	m[408] = "Request Timeout";
+	m[409] = "Conflict";
+	m[411] = "Length Required";
+	m[413] = "Payload Too Large";
+	m[414] = "URI Too Long";
+	m[415] = "Unsupported Media Type";
+	m[500] = "Internal Server Error";
+	m[501] = "Not Implemented";
+	m[504] = "Gateway Timeout";
+	m[505] = "HTTP Version Not Supported";
+	m[508] = "Loop Detected";
+	return m;
+}
+
+std::map<int, std::string> _errorHTML = initErrorMap();
+
+std::string utils::_defaultErrorPages(int status, std::string subText)
+{
+	std::string statusDescrip = _errorHTML[status];
+
+	std::string BodyPage = 
+	"<!DOCTYPE html>\n"
+	"<html lang=\"en\">\n"
+	"<head>\n"
+	"    <meta charset=\"UTF-8\">\n"
+	"    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1\">\n"
+	"    <title>Error Page</title>\n"
+	//"    <link rel=\"canonical\" href=\"https://www.site1/index.html\" />\n"
+	"    <link rel=\"shortcut icon\" href=\"/favicon.ico\">\n"
+	"    <link rel=\"stylesheet\" href=\"/styles.css\">\n"
+	"    <link href=\"https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Major+Mono+Display&display=swap\" rel=\"stylesheet\">\n"
+	"</head>\n"
+	"<body>\n"
+	"    <div class=\"error-container\">\n"
+	"        <h3 class=\"errortitle\">Error " + utils::itoa(status) + "</h3>\n"
+	"        <h3 class=\"errortitle\">" + statusDescrip + ": </h3>\n"
+	"        <p class=\"error-paragraph\">" + subText + " </p>\n"
+	"    </div>\n"
+	"</body>\n"
+	"</html>\n";
+
+	return (BodyPage);
+}

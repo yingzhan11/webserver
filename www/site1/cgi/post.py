@@ -8,42 +8,33 @@ cgitb.enable()
 form = cgi.FieldStorage()
 method = os.environ["REQUEST_METHOD"]
 upload_dir = os.environ["UPLOAD_PATH"]
-#agent = os.environ["USER_AGENT"]
-#ischunked = os.environ["CHUNKED_CONTENT"]
 
 def get_time_stamp():
     return datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
 
+# Create upload directory if it does not exist
 if not os.path.exists(upload_dir):
     os.makedirs(upload_dir)
 
-#if 'USER_AGENT' in os.environ and 'curl' in os.environ['USER_AGENT']:
-#    print("Content-Type: text/html\n")
-#    print("<html><body><p>Erro: para POST com curl usar o arquivo curl.py</p></body></html>")
-#    sys.exit(0)
-
-#if 'CHUNKED_CONTENT' in os.environ and '100-continue' in os.environ['CHUNKED_CONTENT']:
-#    print("Content-Type: text/html\n")
-#    print("<html><body><p>Erro: para POST chunked usar o arquivo curl.py</p></body></html>")
-#    sys.exit(0)
 content_len = 0
 time_stamp = 0
 html_content = ""
 status = "200 OK"
 
+# Check if the request is from curl
 if 'USER_AGENT' in os.environ and 'curl' in os.environ['USER_AGENT']:
     status = "401 Unauthorized"
-    html_content += """<!DOCTYPE html><html lang="pt-BR"><head><body><h3>Erro: para POST com curl usar o arquivo curl.py</h3>"""
+    html_content += """<!DOCTYPE html><html lang="en"><head><body><h3>Error: use curl.py for POST requests with curl</h3>"""
 elif method == "POST":
     html_content = """
     <!DOCTYPE html>
-    <html lang="pt-BR">
+    <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
         <link rel="canonical" href="/index.html" />
         <link rel="shortcut icon" href="/favicon.ico">
-        <title>Cliva Website - Carregar</title>
+        <title>Cliva Website - Upload</title>
         <link rel="stylesheet" href="/styles.css">
         <link href="https://fonts.googleapis.com/css2?family=Exo:wght@400;700&family=Ubuntu:wght@400;700&display=swap"
             rel="stylesheet">
@@ -59,14 +50,14 @@ elif method == "POST":
         <div class="container-top">
             <header>
                 <h2 class="site-logo">Cliva Webserv</h2>
-                <h5 class="site-slogan">A única coisa especial aqui é sua avaliação</h5>
+                <h5 class="site-slogan">The only special thing here is your evaluation</h5>
                 <nav>
                     <ul>
-                        <li><a href="/index.html">Início</a></li>
+                        <li><a href="/index.html">Home</a></li>
                         <li><a href="/tutorial.html">Tutorial</a></li>
-                        <li><a href="/carregar.html">Carregar</a></li>
-                        <li><a href="/apagar.html">Apagar</a></li>
-                        <li><a href="/timestamp.html">Tempo</a></li>
+                        <li><a href="/carregar.html">Upload</a></li>
+                        <li><a href="/apagar.html">Delete</a></li>
+                        <li><a href="/timestamp.html">Time</a></li>
                     </ul>
                 </nav>
             </header>
@@ -89,24 +80,24 @@ elif method == "POST":
                             break
                         f.write(chunk)
                 status = "200 OK"
-                html_content += f"<h3>File '<b>{filename}</b>' carregado com sucesso para <b>{filepath}</b>.</h3>"
+                html_content += f"<h3>File '<b>{filename}</b>' successfully uploaded to <b>{filepath}</b>.</h3>"
             except Exception as e:
                 status = "500 Internal Server Error"
-                html_content += f"<h3>Erro ao carregar o arquivo: {e}</h3>"
+                html_content += f"<h3>Error uploading the file: {e}</h3>"
         else:
             status = "400 Bad Request"
-            html_content += "<h3>Erro ao carregar o arquivo: nenhum arquivo foi fornecido.</h3>"
+            html_content += "<h3>Error uploading the file: no file was provided.</h3>"
     else:
         status = "400 Bad Request"
-        html_content += "<h3>Nenhum arquivo foi carregado.</h3>"
+        html_content += "<h3>No file was uploaded.</h3>"
 else:
     status = "401 Unauthorized"
-    html_content += """<!DOCTYPE html><html lang="pt-BR"><head><body><h3>Erro: método HTTP não suportado.</h3>"""
+    html_content += """<!DOCTYPE html><html lang="en"><head><body><h3>Error: HTTP method not supported.</h3>"""
 
 html_content += """
         </div>
         <footer>
-            <p>Copyright © 2024 Clara Franco & Ívany Pinheiro.</p>
+            <p>Copyright © 2025.</p>
         </footer>
     </div>
 </body>
@@ -126,10 +117,8 @@ response_headers = (
 )
 
 sys.stdout.write(response_headers)
+
 sys.stdout.write(html_content)
 sys.stdout.flush()
-
-#print(response_headers)
-#print(html_content)
 
 sys.exit(0)

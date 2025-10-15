@@ -24,6 +24,7 @@
 
 #include "../config/Config.hpp"
 #include "../CGI/cgi.hpp"
+#include "../Utils/utils.hpp"
 
 class http_request
 {

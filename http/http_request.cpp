@@ -116,14 +116,12 @@ bool http_request::read_once()
 			w_read_idx += bytes_read;
 		}
 		for (int i = 0; i < w_read_idx; i++) {
-    unsigned char c = w_read_buf[i];
-    // if (c == '\r') std::cout << "\\r";
-    // else if (c == '\n') std::cout << "\\n";
-    // else std::cout << c;
-}
-// std::cout << std::endl;
-
-
+            unsigned char c = w_read_buf[i];
+            // if (c == '\r') std::cout << "\\r";
+            // else if (c == '\n') std::cout << "\\n";
+            // else std::cout << c;
+        }
+        // std::cout << std::endl;
 		return true;
 	}
 }
@@ -197,6 +195,7 @@ http_request::HTTP_CODE http_request::parse_request_line(char *text)
     if (strcasecmp(method, "GET") == 0)
     {
         w_method = GET;
+        //TODO just for test
         if (strstr(w_url, ".py") != nullptr)
         {
             is_cgi = 1;
@@ -287,8 +286,10 @@ http_request::HTTP_CODE http_request::parse_content(char *text)
 void http_request::_exportEnv(CGI &cgi)
 {
 	cgi.setNewEnv("GATEWAY_INTERFACE", "CGI/1.1");
-	cgi.setNewEnv("SERVER_PROTOCOL", w_version ? w_version : "HTTP/1.1");
-	cgi.setNewEnv("SERVER_SOFTWARE", "Webserv/1.0");
+	cgi.setNewEnv("SERVER_PROTOCOL", "HTTP/1.1");
+	cgi.setNewEnv("SERVER_SOFTWARE", "server");
+
+    cgi.setNewEnv("QUERY_STRING", "");
 
 	// cgi.setNewEnv("ROOT_FOLDER" , this->serverconfig.root_directory);
     // 当前服务器根目录（如果有 server 配置）
@@ -301,19 +302,20 @@ void http_request::_exportEnv(CGI &cgi)
         cgi.setNewEnv("ROOT_FOLDER", "");
     
 	cgi.setNewEnv("SCRIPT_FILENAME" , this->w_real_file);
+    cgi.setNewEnv("SCRIPT_NAME", this->w_url);
 
 	// cgi.setNewEnv("REQUEST_METHOD", this->_myRequest.getMethod());
-    // std::string method;
-    // switch (w_method)
-    // {
-    //     case http_request::GET: method = "GET"; break;
-    //     case http_request::POST: method = "POST"; break;
-    //     case http_request::PUT: method = "PUT"; break;
-    //     case http_request::DELETE: method = "DELETE"; break;
-    //     case http_request::HEAD: method = "HEAD"; break;
-    //     default: method = "UNKNOWN"; break;
-    // }
-    cgi.setNewEnv("REQUEST_METHOD", "GET");
+    std::string method;
+    switch (w_method)
+    {
+        case http_request::GET: method = "GET"; break;
+        case http_request::POST: method = "POST"; break;
+        case http_request::PUT: method = "PUT"; break;
+        case http_request::DELETE: method = "DELETE"; break;
+        case http_request::HEAD: method = "HEAD"; break;
+        default: method = "UNKNOWN"; break;
+    }
+    cgi.setNewEnv("REQUEST_METHOD", method);
 
 	// cgi.setNewEnv("CONTENT_TYPE" ,this->_myRequest.getHeadData()["Content-Type"]);
 	// cgi.setNewEnv("CONTENT_LENGTH", this->_myRequest.getHeadData()["Content-Length"]);
@@ -322,19 +324,23 @@ void http_request::_exportEnv(CGI &cgi)
     cgi.setNewEnv("CONTENT_LENGTH", std::to_string(w_content_length));
 
 	// cgi.setNewEnv("UPLOAD_PATH", this->_effectiveUpload);
-    cgi.setNewEnv("UPLOAD_PATH", "");
+    cgi.setNewEnv("UPLOAD_PATH", "www/site1/upload");
     
     // 内容类型（你现在没解析，所以留空）
-    cgi.setNewEnv("CONTENT_TYPE", "application/x-www-form-urlencoded");
+    if (method == "GET")
+        cgi.setNewEnv("CONTENT_TYPE", "");
+    else
+        cgi.setNewEnv("CONTENT_TYPE", "application/x-www-form-urlencoded");
 
     // Host 字段
+    cgi.setNewEnv("SERVER_NAME", w_host);
     cgi.setNewEnv("HTTP_HOST", w_host ? w_host : "");
 
     // payload（POST body）
     if (w_string)
     {
-        std::vector<char> w_payload(w_string, w_string + w_content_length);
-        cgi.setNewEnv("PAYLOAD", w_payload);
+        // std::vector<char> w_payload(w_string, w_string + w_content_length);
+        cgi.setNewEnv("PAYLOAD", w_string);
     }
     else
         cgi.setNewEnv("PAYLOAD", "");
@@ -367,19 +373,37 @@ http_request::HTTP_CODE http_request::do_request()
         // this->_effectiveUpload = Utils::_getTimeStamp("%H:%M:%S");
 		_exportEnv(cgi);
         std::cout << "++++++++++++++++++++++++++into cgi+++++++++++++++" << std::endl;
-        cgi.execute();
+        try {
+            cgi.execute();
+        }
+        catch (const std::runtime_error& e) {
+            std::string err = e.what();
+            if (err == "500")
+                return INTERNAL_ERROR;
+        }
         std::cout << "++++++++++++++++++++++++++cgi done+++++++++++++++" << std::endl;
 
+        // 读取 CGI 输出内容
+        std::ifstream outputFile("cgi.html");
+        if (!outputFile.is_open()) {
+            std::cerr << "[CGI] Cannot open CGI output file!" << std::endl;
+            return NO_RESOURCE;
+        }
+
+        std::string cgiOutput((std::istreambuf_iterator<char>(outputFile)),
+                            std::istreambuf_iterator<char>());
+        outputFile.close();
+
         // 把 cgi.html 映射为响应内容
-        // if (stat("cgi.html", &w_file_stat) < 0)
-        //     return NO_RESOURCE;
+        if (stat("cgi.html", &w_file_stat) < 0)
+            return NO_RESOURCE;
 
-        // int fd = open("cgi.html", O_RDONLY);
-        // if (fd < 0)
-        //     return NO_RESOURCE;
+        int fd = open("cgi.html", O_RDONLY);
+        if (fd < 0)
+            return NO_RESOURCE;
 
-        // w_file_address = (char *)mmap(0, w_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-        // close(fd);
+        w_file_address = (char *)mmap(0, w_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+        close(fd);
 
         return FILE_REQUEST;
     }
@@ -411,8 +435,6 @@ http_request::HTTP_CODE http_request::do_request()
 
     return FILE_REQUEST;
 }
-
-
 
 http_request::HTTP_CODE http_request::process_read()
 {
@@ -543,9 +565,6 @@ bool http_request::add_response(const char *format, ...)
     }
     w_write_idx += len;
     va_end(arg_list);
-
-
-
     return true;
 }
 bool http_request::add_status_line(int status, const char *title)
@@ -579,57 +598,81 @@ bool http_request::add_content(const char *content)
 }
 bool http_request::process_write(http_request::HTTP_CODE ret)
 {
+    std::string defaultErrorPage;
     switch (ret)
     {
-    case INTERNAL_ERROR:
-    {
-        add_status_line(500, error_500_title);
-        add_headers(strlen(error_500_form));
-        if (!add_content(error_500_form))
-            return false;
-        break;
-    }
-    case BAD_REQUEST:
-    {
-        add_status_line(404, error_404_title);
-        add_headers(strlen(error_404_form));
-        if (!add_content(error_404_form))
-            return false;
-        break;
-    }
-    case FORBIDDEN_REQUEST:
-    {
-        add_status_line(403, error_403_title);
-        add_headers(strlen(error_403_form));
-        if (!add_content(error_403_form))
-            return false;
-        break;
-    }
-    case FILE_REQUEST:
-    {
-        add_status_line(200, ok_200_title);
-        if (w_file_stat.st_size != 0)
+        case INTERNAL_ERROR:
         {
-            add_headers(w_file_stat.st_size);
-            w_iv[0].iov_base = w_write_buf;
-            w_iv[0].iov_len = w_write_idx;
-            w_iv[1].iov_base = w_file_address;
-            w_iv[1].iov_len = w_file_stat.st_size;
-            w_iv_count = 2;
-            bytes_to_send = w_write_idx + w_file_stat.st_size;
-            return true;
+            //TODO need to check location whether there is error page, if not use this defaultErrorPage
+            defaultErrorPage = utils::_defaultErrorPages(500, error_500_form);
+            add_status_line(500, error_500_title);
+            //add_headers(defaultErrorPage.size());
+            //if (!add_content(defaultErrorPage.c_str()))
+            //    return false;
+            break;
         }
-        else
+        case BAD_REQUEST:
         {
-            const char *ok_string = "<html><body></body></html>";
-            add_headers(strlen(ok_string));
-            if (!add_content(ok_string))
-                return false;
+            defaultErrorPage = utils::_defaultErrorPages(404, error_404_form);
+            add_status_line(404, error_404_title);
+            //add_headers(strlen(error_404_form));
+            //if (!add_content(error_404_form))
+            //    return false;
+            break;
         }
+        case FORBIDDEN_REQUEST:
+        {
+            defaultErrorPage = utils::_defaultErrorPages(403, error_403_form);
+            add_status_line(403, error_403_title);
+            //add_headers(strlen(error_403_form));
+            //if (!add_content(error_403_form))
+            //    return false;
+            break;
+        }
+        case FILE_REQUEST:
+        {
+            if (is_cgi == 1)
+            {
+                // send CGI output as-is
+                w_iv[0].iov_base = w_file_address;
+                w_iv[0].iov_len = w_file_stat.st_size;
+                w_iv_count = 1;
+                bytes_to_send = w_file_stat.st_size;
+                return true;
+            }
+            else {
+                add_status_line(200, ok_200_title);
+                if (w_file_stat.st_size != 0)
+                {
+                    add_headers(w_file_stat.st_size);
+                    w_iv[0].iov_base = w_write_buf;
+                    w_iv[0].iov_len = w_write_idx;
+                    w_iv[1].iov_base = w_file_address;
+                    w_iv[1].iov_len = w_file_stat.st_size;
+                    w_iv_count = 2;
+                    bytes_to_send = w_write_idx + w_file_stat.st_size;
+                    return true;
+                }
+                else
+                {
+                    const char *ok_string = "<html><body></body></html>";
+                    add_headers(strlen(ok_string));
+                    if (!add_content(ok_string))
+                        return false;
+                }
+            }
+        }
+        default:
+            return false;
     }
-    default:
-        return false;
+
+    if (ret != FILE_REQUEST) {
+        add_headers(defaultErrorPage.size());
+        if (!add_content(defaultErrorPage.c_str()))
+            return false;
     }
+    
+
     w_iv[0].iov_base = w_write_buf;
     w_iv[0].iov_len = w_write_idx;
     w_iv_count = 1;
