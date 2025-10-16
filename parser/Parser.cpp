@@ -29,11 +29,11 @@ Parser::~Parser()
 void Parser::_isValidInput(int ac, char **av)
 {
     if (ac > 2)
-        throw std::runtime_error("Parser Error: Too many arguments");
+        throw std::runtime_error("Parser: Too many arguments");
     else if (ac == 2)
         this->_configPath = av[1];
     else
-        this->_configPath = "configFiles/test.conf"; //默认路径
+        this->_configPath = "configFiles/default.conf"; //默认路径
 }
 
 //检查是否是.conf文件，以及.conf文件能否正确打开
@@ -107,9 +107,9 @@ void Parser::_startParsing()
 //解析server block and put into Config.servers
 void Parser::_parseServerSetting(std::string &token, char &currentChar)
 {
-    // std::cout << "2-Entered _parseServerSetting function. token is:" << token << std::endl;
+    //std::cout << "2-Entered _parseServerSetting function. token is:" << token << std::endl;
     if (token != "server")
-        throw std::runtime_error("2-Error: Conf block must start with \"server\".");
+        throw std::runtime_error("Parser: Conf block must start with \"server\".");
     
     this->_serverSetting.clear();
     this->_locations.clear();
@@ -131,7 +131,7 @@ void Parser::_parseServerSetting(std::string &token, char &currentChar)
     }
     //这个server block结束了,检查括号是否匹配
     if (this->_bracketOpen != 0)
-        throw std::runtime_error("2-Error: Bracket error detected.");
+        throw std::runtime_error("Parser: Bracket error detected.");
     // if bracket closed, add this server into servers Config
     else
         Config::getinstance().addConfigToServers(this->_serverSetting, this->_locations);
@@ -155,7 +155,7 @@ std::pair<std::string, RawSetting> Parser::_getLocationSetting(char &currentChar
 
     // check the {} format after location
     if (_checkNextToken(currentChar) != "{")
-        throw std::runtime_error("Error: Location xx has no { after it");
+        throw std::runtime_error("Parser: Location xx has no { after it");
     // if there is {, get the value until } or eof
     token = _checkNextToken(currentChar);
     while (!this->_configFileStream.eof() && token != "}")
@@ -195,12 +195,12 @@ void Parser::_getSetting(std::string const &key, char &currentChar, RawSetting &
             break;
         //todo 检查空格和location
         if (std::isspace(currentChar) && key != "error_page" && key != "allow_methods" && key != "location")
-            throw std::runtime_error("Too many value in this key: " + key);
+            throw std::runtime_error("Parser: Too many value in this key: " + key);
         value += currentChar;
         currentChar = this->_configFileStream.get();
     }
     if (value.empty())
-        throw std::runtime_error("4-Error: No value found for this key: " + key);
+        throw std::runtime_error("Parser: No value found for this key: " + key);
     //if there are multiple ports, add all of them in one key
     if (key == "listen" && setting.find(key) != setting.end())
         setting[key] += " " + value;
@@ -242,9 +242,9 @@ std::string Parser::_checkNextToken(char &currentChar)
         currentChar = this->_configFileStream.get();
     }
     if (this->_bracketOpen != 0)
-        throw std::runtime_error("Error: Bracket error detected.");
+        throw std::runtime_error("Parser: Bracket error detected.");
     if (!this->_foundServer)
-        throw std::runtime_error("Error: No server configuration found.");
+        throw std::runtime_error("Parser: No server configuration found.");
     // std::cout << "2-End of file reached." << std::endl;
     token = "END";
     return token;
@@ -259,13 +259,13 @@ std::string Parser::_getKeyword(char &currentChar, std::string &keyword)
         currentChar = this->_configFileStream.get();
     }
     if (this->_validKeywords.find(keyword) == this->_validKeywords.end()) 
-        throw std::runtime_error("Error: Invalid keyword: " + keyword);
+        throw std::runtime_error("Parser: Invalid keyword: " + keyword);
     if (keyword == "server")
     {
         this->_foundServer = true;
         //只往后检查，不移动token
         if(_checkNextToken(currentChar) != "{")
-            throw std::runtime_error("Error: Server should be followed by \"{\"");
+            throw std::runtime_error("Parser: Server should be followed by \"{\"");
     }
     // std::cout << "3-Getting keyword: " << keyword << std::endl;
     // std::cout << "3-Next char after keyword: '" << currentChar << "'" << std::endl;
