@@ -3,14 +3,10 @@
 import os, sys, cgi
 from datetime import datetime, timezone
 
-
 method = os.environ["REQUEST_METHOD"]
-upload_dir = os.environ["UPLOAD_PATH"]
 
 def get_time_stamp():
     return datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
-if not upload_dir:
-    current_time = datetime.now().strftime("%H%M%S")
 
 content_len = 0
 time_stamp = 0
@@ -26,47 +22,43 @@ if method == "GET":
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
         <link rel="canonical" href="/index.html" />
         <link rel="shortcut icon" href="/favicon.ico">
-        <title>Cliva Website - Carregar</title>
+        <title>CGI-GET</title>
         <link rel="stylesheet" href="/styles.css">
-        <link href="https://fonts.googleapis.com/css2?family=Exo:wght@400;700&family=Ubuntu:wght@400;700&display=swap"
-            rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&display=swap" rel="stylesheet">
         <link
             href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Major+Mono+Display&display=swap"
-            rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+39+Text&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Foldit:wght@100..900&family=Libre+Barcode+39+Text&display=swap"
             rel="stylesheet">
     </head>
     <body>
         <div class="container-top">
             <header>
-                <h2 class="site-logo">Cliva Webserv</h2>
-                <h5 class="site-slogan">A única coisa especial aqui é sua avaliação</h5>
+                <h2 class="site-logo">Webserver - Delete</h2>
+                <h5 class="site-slogan">This is when you finally understand why a URL starts with HTTP</h5>
                 <nav>
                     <ul>
-                        <li><a href="/index.html">Início</a></li>
-                        <li><a href="/tutorial.html">Tutorial</a></li>
-                        <li><a href="/carregar.html">Carregar</a></li>
-                        <li><a href="/apagar.html">Apagar</a></li>
-                        <li><a href="/timestamp.html">Tempo</a></li>
+                        <li><a href="/index.html">Home</a></li>
+                        <li><a href="/testcmd.html">TestCMD</a></li>
+                        <li><a href="/upload.html">Upload</a></li>
+                        <li><a href="/delete.html">Delete</a></li>
+                        <li><a href="/cgiget.html">CGI-GET</a></li>
                     </ul>
                 </nav>
             </header>
             <div class="main-content">
-                <h3>TimeStamp</h3>
-                <p>Abaixo esta o horario do request feito, aproveite para acabar essa avaliacao, e ir comer e relaxar,
-                e nos deixar fazer o mesmo, obrigada!</p>
-                <p>{upload_dir}</p>"""
+                <h3>CGI - get.py</h3>
+                <p>Thank you for your time!</p>
+                <div class="image-container images">
+                    <img src="assets/hive-logo-dark.png" alt="people img">
+                </div>
+                """
     status = "200 OK"
 else:
     status = "401 Unauthorized"
-    html_content = """<!DOCTYPE html>\n<html lang="pt-BR">\n<body><p>Erro: método HTTP não suportado.</p></body></html>"""
+    html_content = """<!DOCTYPE html>\n<html lang="en">\n<body><p>Error: Unsupported HTTP method.</p></body></html>"""
 
 html_content += """
         </div>
         <footer>
-            <p>Copyright © 2024 Clara Franco & Ívany Pinheiro.</p>
+            <p>Webserver @ 2025</p>
         </footer>
     </div>
 </body>

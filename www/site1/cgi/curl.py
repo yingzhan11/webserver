@@ -40,25 +40,25 @@ if method == "POST":
                 with open(filepath, "wb") as f:
                     f.write(data)
                 status = "200 OK"
-                html_content += f"<h3>Conteúdo gravado com sucesso no arquivo '<b>{filename}</b>' em <b>{filepath}</b>.</h3>"
+                html_content += f"<h3>Content successfully written to file '<b>{filename}</b>' em <b>{filepath}</b>.</h3>"
 
             except Exception as e:
                 status = "500 Internal Server Error"
-                html_content += f"<h3>Erro ao gravar no arquivo: {e}</h3>"
+                html_content += f"<h3>Error writing to file: {e}</h3>"
         else:
             status = "400 Bad Request"
-            html_content += f"<h3>Erro: Tipo de arquivo não suportado pelo CGI</h3>"
+            html_content += f"<h3>Error: File type not supported by CGI</h3>"
     else:
         status = "400 Bad Request"
-        html_content += f"<h3>Erro: Cabeçalho CONTENT_TYPE ausente</h3>"
+        html_content += f"<h3>Error: Missing CONTENT_TYPE header</h3>"
 else:
     status = "401 Unauthorized"
-    html_content += "<html><body><p>Erro: método HTTP não suportado.</p>"
+    html_content += "<html><body><h3>Error: Unsupported HTTP method</h3>"
 
 html_content += """
         </div>
         <footer>
-            <p>Copyright © 2024 Clara Franco & Ívany Pinheiro.</p>
+            <p>Webserver @ 2025</p>
         </footer>
     </div>
 </body>

@@ -34,30 +34,24 @@ elif method == "POST":
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
         <link rel="canonical" href="/index.html" />
         <link rel="shortcut icon" href="/favicon.ico">
-        <title>Cliva Website - Upload</title>
+        <title>Upload</title>
         <link rel="stylesheet" href="/styles.css">
-        <link href="https://fonts.googleapis.com/css2?family=Exo:wght@400;700&family=Ubuntu:wght@400;700&display=swap"
-            rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&display=swap" rel="stylesheet">
         <link
             href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Major+Mono+Display&display=swap"
-            rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+39+Text&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Foldit:wght@100..900&family=Libre+Barcode+39+Text&display=swap"
             rel="stylesheet">
     </head>
     <body>
         <div class="container-top">
             <header>
-                <h2 class="site-logo">Cliva Webserv</h2>
-                <h5 class="site-slogan">The only special thing here is your evaluation</h5>
+                <h2 class="site-logo">Webserver - Upload</h2>
+                <h5 class="site-slogan">This is when you finally understand why a URL starts with HTTP</h5>
                 <nav>
                     <ul>
                         <li><a href="/index.html">Home</a></li>
-                        <li><a href="/tutorial.html">Tutorial</a></li>
-                        <li><a href="/carregar.html">Upload</a></li>
-                        <li><a href="/apagar.html">Delete</a></li>
-                        <li><a href="/timestamp.html">Time</a></li>
+                        <li><a href="/testcmd.html">TestCMD</a></li>
+                        <li><a href="/upload.html">Upload</a></li>
+                        <li><a href="/delete.html">Delete</a></li>
+                        <li><a href="/cgiget.html">CGI-GET</a></li>
                     </ul>
                 </nav>
             </header>
@@ -97,7 +91,7 @@ else:
 html_content += """
         </div>
         <footer>
-            <p>Copyright © 2025.</p>
+            <p>Webserver @ 2025</p>
         </footer>
     </div>
 </body>

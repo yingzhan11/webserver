@@ -3,14 +3,14 @@ body, html {
   height: 100%;
   font-family: "DM Mono", monospace;
   font-optical-sizing: auto;
-  background-color: #e8f6f5; 
+  font-weight: 20;
+  font-style: normal;
+  background-color: #dff3ff; 
   color: #464646;
   margin: 0;
   padding: 0;
   display: flex;
-  flex-direction: column;
   justify-content: center;
-  align-items: center;
 }
 
 header {
@@ -20,8 +20,8 @@ header {
   text-align: left;  
   padding: 20px; 
   padding-top: 5px;
-  z-index: 100;  /* Garante que o cabeçalho fique acima de outros elementos */
-  position: relative;  /* Posicionamento relativo para o z-index funcionar */
+  z-index: 100;
+  position: relative;
 }
 
 .container-top {
@@ -42,26 +42,26 @@ header {
 }
 
 .site-logo {
-  font-family: "Foldit", sans-serif;
   font-size: 50px;
+  color: #369bdb;
   text-align: left;
   margin: 0;
   margin-left: 10px;
   margin-top: 50px; 
   margin-bottom: -10px;
+  animation: colorChange 1s infinite;
 }
 
 .site-slogan {
-  font-family: "Major Mono Display", monospace;
-  font-size: 10px;
-  color: #676666;
+  font-size: 15px;
+  color: #85c1e6;
   text-align: left;
   margin: 0;
   margin-left: 15px; 
-  margin-bottom: 10px;
-  padding-top: 0px;
+  margin-bottom: 15px;
+  padding-top: 10px;
   line-height: 1;
-  animation: fadeIn 5s;
+
 }
 
 
@@ -87,23 +87,27 @@ nav ul li {
 
 nav ul li a {
   text-decoration: none;
-  color: #2bbc8a; 
+  color: #8b8b8b; 
   font-weight: bold; 
   font-size: 16px;
   padding: 0 15px;
-  border-right: 1px dotted;
-  border-color: #2bbc8a;
+  margin-top: 10px;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.3s ease;
   align-items: center;
   display: flex;
 }
 
 nav ul li a:hover {
-  color: #a3a1a1;
+  border-bottom-color: #369bdb;
+  color: #369bdb;
 }
 
 
 .general-paragraph {
   margin-bottom: 80px;
+  animation: fadeIn 5s;
 }
 
 .error-paragraph {
@@ -127,18 +131,16 @@ nav ul li a:hover {
 .images img {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
   object-fit: cover;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
   margin-bottom: 10px;
-  border: 1px solid #2bbc8a;
+  animation: fadeIn 5s;
 }
 
 .title {
   font-size: 24px;
-  color: #2b84bc;
+  color: #369bdb;
   margin-bottom: 20px;
-  animation: colorChange 1s infinite;
+  animation: fadeIn 5s;
 }
 
 .errortitle {
@@ -172,9 +174,9 @@ footer {
 
 /* Animations */
 @keyframes colorChange {
-  0% { color: #2b84bc; }
+  0% { color: #369bdb; }
   50% { color: #f0a148; }
-  100% { color: #2b84bc; }
+  100% { color: #369bdb; }
 }
 
 @keyframes redChange {
@@ -204,7 +206,6 @@ to {
 }
 
 .left-column, .right-column {
-  font-family: "Major Mono Display", monospace;
   font-optical-sizing: auto;
   font-weight: 20;
   font-style: normal;

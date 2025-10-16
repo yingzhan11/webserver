@@ -4,6 +4,8 @@ webserver::webserver() : w_pool(nullptr), config(Config::getinstance())
 {
 	users = new http_request[MAX_FD];
 }
+
+//TODO cgi .inputFile and cgi.html need to be delete when connection end, should be here?
 webserver::~webserver()
 {
 	std::cout << "Delete\n";

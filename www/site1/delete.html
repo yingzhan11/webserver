@@ -2,29 +2,28 @@
 <html lang="en">
 
 <head>
-    <!-- Language -->
+    <!-- Idioma -->
     <meta charset="UTF-8">
-    <!-- Responsiveness -->
+    <!-- Responsividade -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <!-- Defines -->
     <link rel="canonical" href="https://www.site1/index.html" />
     <link rel="shortcut icon" href="/favicon.ico">
-    <title>Website</title>
-    <!-- Style -->
+    <title>Delete</title>
+    <!-- Estilo -->
     <link rel="stylesheet" href="/styles.css">
     <!-- Fonts -->
     <link
         href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Major+Mono+Display&display=swap"
         rel="stylesheet">
-    
+
 </head>
 
 <body>
-
     <div class="container-top">
-
+        
         <header>
-            <h2 class="site-logo">Webserver</h2>
+            <h2 class="site-logo">Webserver - Delete</h2>
             <h5 class="site-slogan">This is when you finally understand why a URL starts with HTTP</h5>
             <nav>
                 <ul>
@@ -38,23 +37,33 @@
         </header>
 
         <div class="main-content">
-            <h3 class="title">Summary</h3>
-            <p class="general-paragraph">This project is about writing your own HTTP server.
-                You will be able to test it with an actual browser.
-                HTTP is one of the most used protocols on the internet.
-                Knowing its arcane will be useful, even if you won’t be working on a website.</p>
+            <h3>Delete uploaded files</h3>
+            <p>In the space below, type the file name and click the button. If the file exists, it will be deleted from our physical server's memory.</p>
+
+            <form id="delete-form">
+                <input type="text" name="filename" id="filename" class="input-text" placeholder="Enter file name here" required>
+                <button type="submit" class="button-link">DELETAR</button>
+            </form>
             
-            <div class="image-container images">
-                <img src="assets/an_open_community_WEB-1312x1093.png" alt="people img">
-            </div>
+            <script>
+                document.getElementById('delete-form').addEventListener('submit', function(event) {
+                    event.preventDefault();
+
+                    const filename = document.getElementById('filename').value;
+                    const url = `/upload/${encodeURIComponent(filename)}`;
+
+                    fetch(url, {
+                        method: 'DELETE',
+                    })
+                });
+            </script>
+            
         </div>
 
         <footer>
-            <p>Webserver @ 2025</p>
+            <p>Webserv @ 2025</p>
         </footer>
-
     </div>
-
 </body>
 
 </html>

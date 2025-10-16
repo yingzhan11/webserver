@@ -84,26 +84,31 @@ void Config::_addLocationToRoutes(ServerConfig &server, std::map<std::string, Ra
 			std::string methods = it->second.at("allow_methods");
 			std::istringstream ss(methods);
 			std::string method;
-			while (ss >> method)
+
+			while (ss >> method){
+				if (method != "GET" && method != "POST" && method != "DELETE"){
+					throw std::runtime_error("This server only supports GET, POST, and DELETE methods");
+				}
 				route.allowed_methods.push_back(method);
+			}
 		}
 		if (it->second.find("return") != it->second.end())
 			route.redirect = it->second.at("return");
-		if (it->second.find("root") != it->second.end())
+		if (it->second.find("root") != it->second.end()) {
 			route.root_directory = it->second.at("root");
-			//todo check is there a /
+			if (!_checkRoot(route.root_directory))
+        		throw std::runtime_error("Didn't find the root directory '" + route.root_directory + "'");
+		}
 		if (it->second.find("autoindex") != it->second.end())
 			route.directory_listing = it->second.at("autoindex") == "on";
 		if (it->second.find("try_file") != it->second.end())
-			route.index_file = it->second.at("try_file");
+			route.index_file = _checkPage(server.root_directory, it->second.at("try_file"));
 		if (it->second.find("cgi_ext") != it->second.end())
 			route.cgi_extensions.push_back(it->second.at("cgi_ext"));
 		if (it->second.find("cgi_path") != it->second.end())
 			route.cgi_interpreters.push_back(it->second.at("cgi_path"));
-			//todo check is ther a /
 		if (it->second.find("upload_to") != it->second.end())
 			route.upload_to = it->second.at("upload_to");
-			//todo check is ther a /
 		server.routes.push_back(std::move(route));
 	}
 }
@@ -147,13 +152,12 @@ std::vector<int> Config::_checkPorts(std::string const &portStr)
 {
 	//check port number
 	int portNbr = atoi(portStr.c_str());
-	// port nbr should greater than 1024??? TODO
 	if (portStr.find_first_not_of(" 0123456789") != std::string::npos || portNbr < 0 || portNbr > 65535)
 		throw std::runtime_error("Invalid port number: " + portStr);
 	if (portNbr <= 1024)
 		throw std::runtime_error("Port number must be > 1024 (privileged ports not allowed): " + portStr);
 	
-		std::istringstream iss(portStr);
+	std::istringstream iss(portStr);
 	int port;
 	std::vector<int> ports;
 	while (iss >> port) {
@@ -194,12 +198,12 @@ std::string Config::_checkPage(std::string const &root, std::string const &page)
 		size_t find_dot = page.find_last_of(".");
 
 		if (find_dot == std::string::npos || page.substr(find_dot) != ".html" || page.length() <= std::string(".html").length())
-			throw std::runtime_error("index page must be end by '.html'");
+			throw std::runtime_error("Web page must be end by '.html'");
 		//std::string path
 		std::string path = root + "/" + page;
 		std::ifstream file(path.c_str());
 		if (!file.good())
-			throw std::runtime_error("Page not exist or cannot be opened '" + page + "'");
+			throw std::runtime_error("Web page not exist or cannot be opened '" + page + "'");
 		file.close();
 	}
 	return page;
