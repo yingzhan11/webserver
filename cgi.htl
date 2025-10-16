@@ -6,7 +6,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
         <link rel="canonical" href="/index.html" />
         <link rel="shortcut icon" href="/favicon.ico">
-        <title>Cliva Website - Carregar</title>
+        <title>Webserver - Upload</title>
         <link rel="stylesheet" href="/styles.css">
         <link href="https://fonts.googleapis.com/css2?family=Exo:wght@400;700&family=Ubuntu:wght@400;700&display=swap"
             rel="stylesheet">
@@ -26,15 +26,15 @@
                 <nav>
                     <ul>
                         <li><a href="/index.html">Início</a></li>
-                        <li><a href="/tutorial.html">Tutorial</a></li>
-                        <li><a href="/carregar.html">Carregar</a></li>
-                        <li><a href="/apagar.html">Apagar</a></li>
-                        <li><a href="/timestamp.html">Tempo</a></li>
+                        <li><a href="/testcmd.html">testCMD</a></li>
+                        <li><a href="/upload.html">Upload</a></li>
+                        <li><a href="/delete.html">Delete</a></li>
+                        <li><a href="/cgiget.html">Tempo</a></li>
                     </ul>
                 </nav>
             </header>
             <div class="main-content">
-                <h3>TimeStamp</h3>
+                <h3>cgiget</h3>
                 <p>Abaixo esta o horario do request feito, aproveite para acabar essa avaliacao, e ir comer e relaxar,
                 e nos deixar fazer o mesmo, obrigada!</p>
                 <p>www/site1/upload</p>

@@ -2,29 +2,27 @@
 <html lang="en">
 
 <head>
-    <!-- Language -->
+    <!-- Idioma -->
     <meta charset="UTF-8">
-    <!-- Responsiveness -->
+    <!-- Responsividade -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <!-- Defines -->
-    <link rel="canonical" href="https://www.site1/index.html" />
+    <link rel="canonical" href="/index.html" />
     <link rel="shortcut icon" href="/favicon.ico">
-    <title>Website</title>
-    <!-- Style -->
+    <title>Upload</title>
+    <!-- Estilo -->
     <link rel="stylesheet" href="/styles.css">
     <!-- Fonts -->
     <link
         href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Major+Mono+Display&display=swap"
         rel="stylesheet">
-    
 </head>
 
 <body>
-
     <div class="container-top">
-
+        
         <header>
-            <h2 class="site-logo">Webserver</h2>
+            <h2 class="site-logo">Webserver - Upload</h2>
             <h5 class="site-slogan">This is when you finally understand why a URL starts with HTTP</h5>
             <nav>
                 <ul>
@@ -38,23 +36,29 @@
         </header>
 
         <div class="main-content">
-            <h3 class="title">Summary</h3>
-            <p class="general-paragraph">This project is about writing your own HTTP server.
-                You will be able to test it with an actual browser.
-                HTTP is one of the most used protocols on the internet.
-                Knowing its arcane will be useful, even if you won’t be working on a website.</p>
+            <h3>Upload new files</h3>
+            <p>Press the button below, choose a file</p>
             
-            <div class="image-container images">
-                <img src="assets/an_open_community_WEB-1312x1093.png" alt="people img">
-            </div>
+            <form action="/post.py" method="post" enctype="multipart/form-data">
+                <label for="file-upload" class="button-link">SELECT</label>
+                <input id="file-upload" type="file" name="fileUpload" accept=".jpg,.jpeg,.png,.pdf,.c,.cpp,.js,.txt,.mp4" style="display: none;">
+                <input type="submit" value="Send File" style="display: none;" id="submit-btn">
+            </form>
+            
+            <script>
+                document.getElementById('file-upload').addEventListener('change', function() {
+                    if (this.files.length > 0) {
+                        document.getElementById('submit-btn').click();
+                    }
+                });
+            </script>
+
         </div>
 
         <footer>
             <p>Webserver @ 2025</p>
         </footer>
-
     </div>
-
 </body>
 
 </html>

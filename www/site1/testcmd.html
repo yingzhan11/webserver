@@ -9,18 +9,12 @@
     <!-- Defines -->
     <link rel="canonical" href="https://www.site1/index.html" />
     <link rel="shortcut icon" href="/favicon.ico">
-    <title>Tutorial</title>
+    <title>TestCMD</title>
     <!-- Style -->
     <link rel="stylesheet" href="/styles.css">
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Exo:wght@400;700&family=Ubuntu:wght@400;700&display=swap"
-        rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&display=swap" rel="stylesheet">
     <link
         href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Major+Mono+Display&display=swap"
-        rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+39+Text&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Foldit:wght@100..900&family=Libre+Barcode+39+Text&display=swap"
         rel="stylesheet">
 </head>
 
@@ -28,15 +22,15 @@
     <div class="container-top">
         
         <header>
-            <h2 class="site-logo">Webserver</h2>
+            <h2 class="site-logo">Webserver - TestCMD</h2>
             <h5 class="site-slogan">This is when you finally understand why a URL starts with HTTP</h5>
             <nav>
                 <ul>
                     <li><a href="/index.html">Home</a></li>
-                    <li><a href="/tutorial.html">Tutorial</a></li>
-                    <li><a href="/carregar.html">Upload</a></li>
-                    <li><a href="/apagar.html">Delete</a></li>
-                    <li><a href="/timestamp.html">Time</a></li>
+                    <li><a href="/testcmd.html">TestCMD</a></li>
+                    <li><a href="/upload.html">Upload</a></li>
+                    <li><a href="/delete.html">Delete</a></li>
+                    <li><a href="/cgiget.html">CGI-GET</a></li>
                 </ul>
             </nav>
         </header>
@@ -44,56 +38,71 @@
         <div class="main-content">
             <article class="blog-post">
                 <p>Below you will find some terminal commands that will help you expand testing for our web server.</p>
-                
-                <h3>1. Functionality</h3>
 
-                <p>Run the command below in the terminal, and the web server should be able to run with a predefined default configuration file.</p>
-                <pre><code>./webserv</code></pre>
+                <p>1 - Run the command below in the terminal, and the web server should be able to run with a predefined default configuration file.</p>
+                <pre><code>./server</code></pre>
                 
-                <p>Run the command below in the terminal to use curl.</p>
+                <p>2 - Run the command below in the terminal to use curl. You’ll see a detailed verbose output.</p>
                 <pre><code>curl -v http://localhost:8080</code></pre>
+                <p>The result would be the actual body of the response (HTML, plain text, etc), something like this:</p>
+                <pre><code>*   Trying 127.0.0.1:8080...
+* Connected to localhost (127.0.0.1) port 8080 (#0)
+> GET / HTTP/1.1
+> Host: localhost:8080
+> User-Agent: curl/8.6.0
+> Accept: */*
+> 
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< Content-Length: 123
+< Connection:close
+<
+< HTML BODY START HERE
+< ...
+< HTML BODY END
+* Closing Connection 0</code></pre>
                 
-                <p>Run the command below in the terminal to test multiple hostnames.</p>
-                <pre><code>curl -v -H "Host:site1" http://localhost:8080</code></pre>
+                <p>Run the command below in the terminal to test multiple hostnames. If you change the hostname, the 'host' in output will changed.</p>
+                <pre><code>curl -v -H "Host:hostname" http://localhost:8080</code></pre>
 
-                <p>Run the command below in the terminal to test the POST method and the “client body limit” (change the <code>client_max_body_size</code> in the .config file).</p>
+                <p>3 - Run the command below in the terminal to test the POST method and the “client body limit” (change the <code>client_max_body_size</code> in the .config file).</p>
                 <pre><code>curl -X POST -H "Content-Type: text/plain" --data "HI" http://localhost:8080/curl.py</code></pre>
 
-                <p>Run the command below in the terminal to test the DELETE method.</p>
+                <p>4 - Run the command below in the terminal to test the DELETE method.</p>
                 <pre><code>curl -X DELETE http://localhost:8080/upload/curl</code></pre>
 
-                <p>Run the command below in the terminal to test the GET method.</p>
+                <p>5 - Run the command below in the terminal to test the GET method.</p>
                 <pre><code>curl -X GET http://localhost:8080/get.py</code></pre>
 
-                <p>Run the command below in the terminal to test an unknown method.</p>
+                <p>6 - Run the command below in the terminal to test an unknown method.</p>
                 <pre><code>curl -X AFE http://localhost:8080/</code></pre>
 
-                <p>Run the command below in the terminal to test the POST method with chunked transfer for an image.</p>                
+                <p>7 - Run the command below in the terminal to test the POST method with chunked transfer for an image.</p>                
                 <pre><code>curl --trace - --header "Transfer-Encoding: chunked" --header "Content-Type: image/jpeg" --data-binary @/home/ivbatist/Downloads/wallpaper.jpg http://localhost:8080/curl.py</code></pre>
 
-                <p>Run the command below in the terminal to test the POST method with chunked transfer for text.</p>  
+                <p>8 - Run the command below in the terminal to test the POST method with chunked transfer for text.</p>  
                 <pre><code>curl --trace - --header "Transfer-Encoding: chunked" --header "Content-Type: text/plain" --data "HELLOTHERE" http://localhost:8080/curl.py</code></pre>
 
-                <p>Run the command below in the terminal to test the POST method with chunked transfer for a video.</p>  
+                <p>9 - Run the command below in the terminal to test the POST method with chunked transfer for a video.</p>  
                 <pre><code>curl --trace - --header "Transfer-Encoding: chunked" --header "Content-Type: video/mp4" --data-binary @/home/ivbatist/Downloads/videoTester.mp4 http://localhost:8080/curl.py</code></pre>
 
-                <p>Run the command below in the terminal to test the POST method for a CGI script with an infinite loop.</p>
+                <p>10 - Run the command below in the terminal to test the POST method for a CGI script with an infinite loop.</p>
                 <pre><code>curl -X POST -H "Content-Type: text/plain" --data "HI" http://localhost:8080/error.py</code></pre>
 
-                <p>Run the command below in the terminal to stress test the server — so we can all be stressed together :D</p>
+                <p>11 - Run the command below in the terminal to stress test the server — so we can all be stressed together :D</p>
                 <pre><code>siege -b -t30S -c10 http://localhost:8080/empty.html</code></pre>
 
-                <p>In another terminal, check the server’s PID.</p>
+                <p>12 - In another terminal, check the server’s PID.</p>
                 <pre><code>ps aux | grep ./webserv</code></pre>
                 
-                <p>Monitor memory usage.</p>
+                <p>13 - Monitor memory usage.</p>
                 <pre><code>top -p PID</code></pre>
                 
             </article>
         </div>
 
         <footer>
-            <p>Webserv @ 2025</p>
+            <p>Webserver @ 2025</p>
         </footer>
     </div>
 </body>
