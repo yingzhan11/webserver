@@ -2,28 +2,28 @@
 <html lang="en">
 
 <head>
-    <!-- Idioma -->
+    <!-- Language -->
     <meta charset="UTF-8">
-    <!-- Responsividade -->
+    <!-- Responsiveness -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <!-- Defines -->
     <link rel="canonical" href="https://www.site1/index.html" />
     <link rel="shortcut icon" href="/favicon.ico">
-    <title>Delete</title>
-    <!-- Estilo -->
+    <title>Delete Files - Webserver</title>
+    <!-- Style -->
     <link rel="stylesheet" href="/styles.css">
     <!-- Fonts -->
     <link
         href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Major+Mono+Display&display=swap"
         rel="stylesheet">
-
 </head>
 
 <body>
+
     <div class="container-top">
-        
+
         <header>
-            <h2 class="site-logo">Webserver - Delete</h2>
+            <h2 class="site-logo">Webserver</h2>
             <h5 class="site-slogan">This is when you finally understand why a URL starts with HTTP</h5>
             <nav>
                 <ul>
@@ -37,33 +37,110 @@
         </header>
 
         <div class="main-content">
-            <h3>Delete uploaded files</h3>
-            <p>In the space below, type the file name and click the button. If the file exists, it will be deleted from our physical server's memory.</p>
+            <h3 class="title">Delete Uploaded Files</h3>
+            <p class="general-paragraph">
+                Type the file name or click one from the list to delete it permanently from the server.
+            </p>
 
             <form id="delete-form">
-                <input type="text" name="filename" id="filename" class="input-text" placeholder="Enter file name here" required>
-                <button type="submit" class="button-link">DELETAR</button>
+                <input type="text" name="filename" id="filename" class="input-text" placeholder="e.g. bus.jpg" required>
+                <button type="submit" class="button-link">DELETE</button>
             </form>
-            
-            <script>
-                document.getElementById('delete-form').addEventListener('submit', function(event) {
-                    event.preventDefault();
 
-                    const filename = document.getElementById('filename').value;
-                    const url = `/upload/${encodeURIComponent(filename)}`;
-
-                    fetch(url, {
-                        method: 'DELETE',
-                    })
-                });
-            </script>
-            
+            <h4 class="subtitle">Uploaded Files:</h4>
+            <div id="file-list" class="file-list">
+                <p>Loading...</p>
+            </div>
         </div>
 
         <footer>
-            <p>Webserv @ 2025</p>
+            <p>Webserver @ 2025</p>
         </footer>
-    </div>
-</body>
 
+    </div>
+
+    <script>
+        let uploadBase = "/upload"; // default
+
+        async function tryFetch(url) {
+            try {
+                const res = await fetch(url);
+                if (res.ok) return res;
+                throw new Error("Status " + res.status);
+            } catch {
+                return null;
+            }
+        }
+
+        async function loadFileList() {
+            const listDiv = document.getElementById('file-list');
+            listDiv.innerHTML = '<p>Loading...</p>';
+
+            // try both /uploads/ and /upload/
+            let res = await tryFetch('/upload/');
+            if (!res) {
+                res = await tryFetch('/upload/');
+                if (res) uploadBase = "/upload";
+            }
+
+            if (!res) {
+                listDiv.innerHTML = '<p>⚠️ Cannot access upload directory.</p>';
+                return;
+            }
+
+            const html = await res.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const links = Array.from(doc.querySelectorAll('a'))
+                .map(a => a.getAttribute('href'))
+                .filter(href => href && !href.endsWith('/') && href !== '../');
+
+            if (links.length === 0) {
+                listDiv.innerHTML = '<p>No uploaded files found.</p>';
+                return;
+            }
+
+            // only show filename (remove path)
+            const names = links.map(href => href.split('/').pop());
+
+            listDiv.innerHTML = '<ul>' +
+                names.map(f => `<li><a onclick="selectFile('${f}')">${f}</a></li>`).join('') +
+                '</ul>';
+        }
+
+        function selectFile(filename) {
+            const input = document.getElementById('filename');
+            input.value = filename;
+            input.focus();
+        }
+
+        document.getElementById('delete-form').addEventListener('submit', async function (event) {
+            event.preventDefault();
+            const filename = document.getElementById('filename').value.trim();
+            if (!filename) return alert("Please enter a filename.");
+
+            if (!confirm(`Are you sure you want to delete "${filename}"?`)) return;
+
+            const url = `${uploadBase}/${encodeURIComponent(filename)}`;
+            try {
+                const res = await fetch(url, { method: 'DELETE' });
+                if (res.ok) {
+                    alert(`✅ "${filename}" deleted successfully!`);
+                    loadFileList();
+                } else if (res.status === 404) {
+                    alert(`❌ File not found.`);
+                } else if (res.status === 403) {
+                    alert(`🚫 Permission denied.`);
+                } else {
+                    alert(`⚠️ Delete failed. Status: ${res.status}`);
+                }
+            } catch (err) {
+                alert("Network error: " + err.message);
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', loadFileList);
+    </script>
+
+</body>
 </html>

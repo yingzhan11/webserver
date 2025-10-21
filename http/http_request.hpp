@@ -30,7 +30,7 @@ class http_request
 {
 public:
 	static const int FILENAME_LEN = 200;
-	static const int READ_BUFFER_SIZE = 2048;
+	static const int READ_BUFFER_SIZE = 64 * 1024;
 	static const int WRITE_BUFFER_SIZE = 1024;
 	static int w_user_count;
 	static int w_epollfd;
@@ -64,6 +64,7 @@ public:
 		FORBIDDEN_REQUEST,
 		FILE_REQUEST,
 		INTERNAL_ERROR,
+		DELETE_OK,
 		CLOSED_CONNECTION
 	};
 	enum LINE_STATUS
@@ -100,7 +101,7 @@ private:
 	char *w_string; //payload
 	int bytes_to_send;
 	int bytes_have_send;
-
+	std::string w_content_type;
 public:
 	http_request();
 	~http_request();
@@ -112,6 +113,11 @@ public:
 	void close_conn(bool real_close = true);
 private:
 	HTTP_CODE process_read();
+	  std::string w_root_abs;
+    std::string w_upload_abs;
+	std::string w_upload_url_prefix; 
+
+	bool compute_paths_once(const std::string& urlPath);
 	char *get_line() { return w_read_buf + w_start_line; };
 	HTTP_CODE parse_request_line(char *text);
 	LINE_STATUS parse_line();
