@@ -39,37 +39,22 @@
             <article class="blog-post">
                 <p>Below you will find some terminal commands that will help you expand testing for our web server.</p>
 
-                <p>1 - Run the command below in the terminal, and the web server should be able to run with a predefined default configuration file.</p>
+                <p>1 - Run the command below in the terminal, and the web server should be able to run with a predefined default configuration file(default.conf).</p>
                 <pre><code>./server</code></pre>
-                
-                <p>2 - Run the command below in the terminal to use curl. You’ll see a detailed verbose output.</p>
+
+                <p>Run the command below in the terminal to test multiple hostnames.</p>
                 <pre><code>curl -v http://localhost:8080</code></pre>
-                <p>The result would be the actual body of the response (HTML, plain text, etc), something like this:</p>
-                <pre><code>*   Trying 127.0.0.1:8080...
-* Connected to localhost (127.0.0.1) port 8080 (#0)
-> GET / HTTP/1.1
-> Host: localhost:8080
-> User-Agent: curl/8.6.0
-> Accept: */*
-> 
-* Mark bundle as not supporting multiuse
-< HTTP/1.1 200 OK
-< Content-Length: 123
-< Connection:close
-<
-< HTML BODY START HERE
-< ...
-< HTML BODY END
-* Closing Connection 0</code></pre>
+                <pre><code>curl -v --resolve example.com:8080:127.0.0.1 http://example.com:8080</code></pre>
                 
-                <p>Run the command below in the terminal to test multiple hostnames. If you change the hostname, the 'host' in output will changed.</p>
-                <pre><code>curl -v -H "Host:hostname" http://localhost:8080</code></pre>
+                <p>2 - Run the server with multipl.conf, then run the command below in the terminal to use curl. You’ll see a detailed verbose output.</p>
+                <pre><code>curl http://localhost:8080</code></pre>
+                <pre><code>curl http://localhost:8081</code></pre>
 
                 <p>3 - Run the command below in the terminal to test the POST method and the “client body limit” (change the <code>client_max_body_size</code> in the .config file).</p>
                 <pre><code>curl -X POST -H "Content-Type: text/plain" --data "HI" http://localhost:8080/curl.py</code></pre>
 
                 <p>4 - Run the command below in the terminal to test the DELETE method.</p>
-                <pre><code>curl -X DELETE http://localhost:8080/upload/curl</code></pre>
+                <pre><code>curl -X DELETE http://localhost:8080/upload/curl.txt</code></pre>
 
                 <p>5 - Run the command below in the terminal to test the GET method.</p>
                 <pre><code>curl -X GET http://localhost:8080/get.py</code></pre>
@@ -89,8 +74,8 @@
                 <p>10 - Run the command below in the terminal to test the POST method for a CGI script with an infinite loop.</p>
                 <pre><code>curl -X POST -H "Content-Type: text/plain" --data "HI" http://localhost:8080/error.py</code></pre>
 
-                <p>11 - Run the command below in the terminal to stress test the server — so we can all be stressed together :D</p>
-                <pre><code>siege -b -t30S -c10 http://localhost:8080/empty.html</code></pre>
+                <p>11 - Run the command below in the terminal to stress test the server. -c10 means 10 concurrent, -t10S means lasts 30 seconds</p>
+                <pre><code>siege -b -t10S -c10 http://localhost:8080/empty.html</code></pre>
 
                 <p>12 - In another terminal, check the server’s PID.</p>
                 <pre><code>ps aux | grep ./webserv</code></pre>
