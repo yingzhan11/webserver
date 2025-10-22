@@ -167,6 +167,8 @@ bool http_request::read_once()
 		return true;
 	}
 }
+
+
 void removefd(int epollfd, int fd)
 {
     epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, 0);

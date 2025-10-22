@@ -1,4 +1,5 @@
 #include "webserver.hpp"
+#include "./http/http_request.hpp"
 
 webserver::webserver() : w_pool(nullptr), config(Config::getinstance())
 {
@@ -27,88 +28,95 @@ void webserver::thread_pool()
 // 	return false;
 // }
 
+// 辅助：查找已存在的 fd
+int webserver::findExistingFd(const std::string& ip, int port)
+{
+    std::string key = ip + ":" + std::to_string(port);
+    auto it = listenfd.find(key);
+    return (it != listenfd.end()) ? it->second : -1;
+}
+
+
 void webserver::eventlisten()
 {
-	std::unordered_map<int, std::unordered_set<std::string>> boundIPs;
-	std::vector<std::string> globalIpset = checkifaddr();
+    std::unordered_map<int, std::unordered_set<std::string>> boundIPs;
+    std::vector<std::string> globalIpset = checkifaddr();
 
-	for (const ServerConfig &server : config.servers)
-	{
-		for (int port : server.ports)
-		{
-			std::string ipport = server.ip + ":" + std::to_string(port);
-			std::cout << "Iport:" << ipport << std::endl;
-			if (!server.ip.empty())
-			{
-				if (boundIPs[port].count(server.ip))
-				{
-					std::cout << server.ip << ":" << port << " Aready bound.Move to next!" << std::endl;
-					CurrentIpMemberServer[listenfd[ipport]].insert(server);
-					std::cout << "---------------------------------fd:" << listenfd[ipport] << std::endl
-							  << std::endl;
-					continue;
-				}
-				int socket = createListenSocket(server.ip.c_str(), port, &boundIPs);
-				listenfd[ipport] = socket;
-				std::cout << "listenfd:" << socket << "  server:" << server.server_name << std::endl
-				 << std::endl;
-				CurrentIpMemberServer[socket].insert(server);
-				std::cout << "---------------------------------fd:" << socket << std::endl
-						  << std::endl;
-			}
-			else
-			{
-				std::vector<std::string> ipset = globalIpset;
-				ipset.erase(std::remove_if(ipset.begin(), ipset.end(), [&](const std::string &ip)
-										   { return boundIPs[port].count(ip) > 0; }),
-							ipset.end());
-				if (ipset.size() == 0)
-				{
-					// std::cout << "Current All:port already bound.Move to next!" << std::endl;
-					for (std::string ip : globalIpset)
-					{
-						std::string gloipport = ip + ":" + std::to_string(port);
-						// std::cout << "gloipport:" << gloipport << "  server:" << server.server_name << std::endl
-						// 		  << std::endl;
-						CurrentIpMemberServer[listenfd[gloipport]].insert(server);
-						// std::cout << "---------------------------------glofd1:" << listenfd[gloipport] << std::endl
-						// 		  << std::endl;
-					}
-					continue;
-				}
-				for (const std::string &ip : ipset)
-				{
-					ipport = ip + ":" + std::to_string(port);
-					std::cout << "Iport:" << ipport << std::endl;
-					int socket = createListenSocket(ip.c_str(), port, &boundIPs);
-					listenfd[ipport] = socket;
-					// std::cout << "listenfd:" << socket << "  server:" << server.server_name << std::endl
-					// 		  << std::endl;
-					// CurrentIpMemberServer[socket].insert(server);
-				}
-				for (std::string ip : globalIpset)
-				{
-					std::string gloipport = ip + ":" + std::to_string(port);
-					// std::cout << "gloipport:" << gloipport << "  server:" << server.server_name << std::endl
-					// 		  << std::endl;
-					CurrentIpMemberServer[listenfd[gloipport]].insert(server);
-					// std::cout << "---------------------------------glofd2:" << listenfd[gloipport] << std::endl
-					// 		  << std::endl;
-				}
-			}
-		}
-	}
-	for (auto it = CurrentIpMemberServer.begin(); it != CurrentIpMemberServer.end(); ++it)
-	{
-		int fd = it->first;
-		const std::unordered_set<ServerConfig> &serverSet = it->second;
+    for (const ServerConfig &server : config.servers)
+    {
+        for (int port : server.ports)
+        {
+            if (!server.ip.empty()) {
+                std::string key = server.ip + ":" + std::to_string(port);
+                std::cout << "Iport:" << key << std::endl;
 
-		std::cout << "Socket FD: " << fd << " -> Servers:\n";
-		for (const ServerConfig &server : serverSet)
-			std::cout << server.server_name << "\n";
-	}
-	epollrigster();
+                // 如果本进程已在此端口绑定过该 IP，直接复用
+                if (boundIPs[port].count(server.ip)) {
+                    int fd = findExistingFd(server.ip, port);
+                    if (fd >= 0) {
+                        CurrentIpMemberServer[fd].insert(server);
+                    }
+                    continue;
+                }
+
+                int fd = createListenSocket(server.ip.c_str(), port, &boundIPs);
+                if (fd == -2) {
+                    // 端口占用：尝试复用本进程已有 fd，否则跳过此 server 的该监听
+                    int existed = findExistingFd(server.ip, port);
+                    if (existed >= 0) {
+                        CurrentIpMemberServer[existed].insert(server);
+                    } else {
+                        std::cerr << "[skip] " << key << " occupied by another process, this vhost won't be active here.\n";
+                    }
+                    continue;
+                } else if (fd < 0) {
+                    // 其他错误：记录并跳过
+                    std::cerr << "[error] fail to listen " << key << ", skip.\n";
+                    continue;
+                }
+
+                listenfd[key] = fd;
+                CurrentIpMemberServer[fd].insert(server);
+            } else {
+                // ip 为空：遍历本机 IPv4 列表
+                for (const std::string &ip : globalIpset) {
+                    std::string key = ip + ":" + std::to_string(port);
+
+                    if (boundIPs[port].count(ip)) {
+                        int fd = findExistingFd(ip, port);
+                        if (fd >= 0) CurrentIpMemberServer[fd].insert(server);
+                        continue;
+                    }
+
+                    int fd = createListenSocket(ip.c_str(), port, &boundIPs);
+                    if (fd == -2) {
+                        int existed = findExistingFd(ip, port);
+                        if (existed >= 0) {
+                            CurrentIpMemberServer[existed].insert(server);
+                        } else {
+                            std::cerr << "[skip] " << key << " occupied by another process.\n";
+                        }
+                        continue;
+                    } else if (fd < 0) {
+                        std::cerr << "[error] fail to listen " << key << ", skip.\n";
+                        continue;
+                    }
+
+                    listenfd[key] = fd;
+                    CurrentIpMemberServer[fd].insert(server);
+                }
+            }
+        }
+    }
+
+    // 打印映射
+    for (auto &kv : CurrentIpMemberServer) {
+        std::cout << "Socket FD: " << kv.first << " -> Servers:\n";
+        for (const ServerConfig &s : kv.second) std::cout << "  " << s.server_name << "\n";
+    }
+    epollrigster();
 }
+
 
 void webserver::epollrigster()
 {
@@ -259,6 +267,7 @@ void webserver::dealwithwrite(int sockfd)
 		}
 	}
 }
+
 void webserver::eventloop()
 {
 	bool stop = false;
@@ -270,10 +279,18 @@ void webserver::eventloop()
 			perror("Epoll failed");
 			break;
 		}
-		for (int i = 0; i < number; i++)
-		{
-			int sockfd = events[i].data.fd;
-			std::cout << "Event on fd: " << sockfd << ", event mask: " << events[i].events << std::endl;
+	for (int i = 0; i < number; i++) {
+    int sockfd = events[i].data.fd;
+    uint32_t ev = events[i].events;
+
+   
+    if (!isListenfd(sockfd) && (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP))) {
+      
+       users[sockfd].close_conn(true);
+ 
+   
+        continue;
+    }
 
 			if (isListenfd(sockfd))
 			{
@@ -325,24 +342,39 @@ std::vector<std::string> checkifaddr()
 	return ipset;
 }
 
-int createListenSocket(const char *ip, int port, std::unordered_map<int, std::unordered_set<std::string>> *boundIPs)
+int createListenSocket(const char *ip, int port,
+                       std::unordered_map<int, std::unordered_set<std::string>> *boundIPs)
 {
+    int listenfd = socket(PF_INET, SOCK_STREAM, 0);
+    if (listenfd < 0) { perror("socket"); return -1; }
 
-	int listenfd = socket(PF_INET, SOCK_STREAM, 0);
-	assert(listenfd >= 0);
-	int flag = 1;
-	setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
-	struct sockaddr_in address;
-	memset(&address, 0, sizeof(address));
-	address.sin_family = AF_INET;
-	address.sin_port = htons(port);
-	address.sin_addr.s_addr = inet_addr(ip);
-	int ret = bind(listenfd, (struct sockaddr *)&address, sizeof(address));
-	assert(ret >= 0);
-	ret = listen(listenfd, 5);
-	assert(ret >= 0);
-	if (ip)
-		(*boundIPs)[port].insert(std::string(ip));
+    int flag = 1;
+    setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
 
-	return listenfd;
+    struct sockaddr_in address;
+    memset(&address, 0, sizeof(address));
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);
+    address.sin_addr.s_addr = inet_addr(ip);  // 如需更稳健可换 inet_pton
+
+    if (bind(listenfd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+        if (errno == EADDRINUSE) {
+            // 已被其他进程或实例占用：不崩溃，返回特殊码
+            fprintf(stderr, "bind EADDRINUSE on %s:%d, skip this listen\n", ip, port);
+            close(listenfd);
+            return -2;
+        } else {
+            perror("bind");
+            close(listenfd);
+            return -1;
+        }
+    }
+    if (listen(listenfd, 128) < 0) {
+        perror("listen");
+        close(listenfd);
+        return -1;
+    }
+
+    if (ip) (*boundIPs)[port].insert(std::string(ip));
+    return listenfd;
 }

@@ -27,6 +27,7 @@ private:
 	std::unordered_map<int, std::unordered_set<ServerConfig>> CurrentIpMemberServer;
 	std::unordered_map<std::string, int> listenfd;
 	epoll_event events[MAX_EVENTNUMBER];
+	  int findExistingFd(const std::string& ip, int port);
 public:
 	webserver();
 	~webserver();
