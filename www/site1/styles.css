@@ -27,7 +27,8 @@ header {
 .container-top {
   overflow: visible;
   width: 80%;
-  max-width: 640px;
+  max-width: 960px;
+  min-width: 960px;
   padding: 50px;
   text-align: center;
 }
@@ -199,9 +200,9 @@ to {
   width: 80%;
   max-width: 640px;
   padding: 50px;
-  background: #ffffff; 
+  /*background: #ffffff; 
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);*/
   text-align: center;
 }
 

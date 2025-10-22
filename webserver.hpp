@@ -42,7 +42,7 @@ public:
 	void dealwithwrite(int sockfd);
 public:
 	int w_threadnum; // number of threads
-	int w_trimode = 1;	 // trigger model
+	int w_trimode = 0;	 // trigger model
 	int w_maxrequest;
 	utils util;
 	http_request *users;

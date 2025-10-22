@@ -59,28 +59,19 @@
                 <p>5 - Run the command below in the terminal to test the GET method.</p>
                 <pre><code>curl -X GET http://localhost:8080/get.py</code></pre>
 
-                <p>6 - Run the command below in the terminal to test an unknown method.</p>
-                <pre><code>curl -X AFE http://localhost:8080/</code></pre>
-
-                <p>7 - Run the command below in the terminal to test the POST method for an image.</p>                
+                <p>6 - Run the command below in the terminal to test the POST method.</p>                
                 <pre><code>curl --header "Content-Type: image/jpeg" --data-binary @/home/yzhan/Downloads/wallpaper.jpg http://localhost:8080/curl.py</code></pre>
 
-                <p>8 - Run the command below in the terminal to test the POST method with chunked transfer for text.</p>  
-                <pre><code>curl --trace - --header "Transfer-Encoding: chunked" --header "Content-Type: text/plain" --data "HELLOTHERE" http://localhost:8080/curl.py</code></pre>
+                <p>7 - Run the command below in the terminal to test an unknown method.</p>
+                <pre><code>curl -X AFE http://localhost:8080/</code></pre>
 
-                <p>9 - Run the command below in the terminal to test the POST method with chunked transfer for a video.</p>  
-                <pre><code>curl --trace - --header "Transfer-Encoding: chunked" --header "Content-Type: video/mp4" --data-binary @/home/ivbatist/Downloads/videoTester.mp4 http://localhost:8080/curl.py</code></pre>
-
-                <p>10 - Run the command below in the terminal to test the POST method for a CGI script with an infinite loop.</p>
-                <pre><code>curl -X POST -H "Content-Type: text/plain" --data "HI" http://localhost:8080/error.py</code></pre>
-
-                <p>11 - Run the command below in the terminal to stress test the server. -c10 means 10 concurrent, -t10S means lasts 30 seconds</p>
+                <p>8 - Run the command below in the terminal to stress test the server. -c10 means 10 concurrent, -t10S means lasts 30 seconds</p>
                 <pre><code>siege -b -t10S -c10 http://localhost:8080/empty.html</code></pre>
 
-                <p>12 - In another terminal, check the server’s PID.</p>
-                <pre><code>ps aux | grep ./webserv</code></pre>
+                <p>9 - In another terminal, check the server’s PID.</p>
+                <pre><code>ps aux | grep ./server</code></pre>
                 
-                <p>13 - Monitor memory usage.</p>
+                <p>10 - Monitor memory usage.</p>
                 <pre><code>top -p PID</code></pre>
                 
             </article>
