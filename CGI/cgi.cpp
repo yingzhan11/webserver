@@ -52,7 +52,7 @@ void CGI::execute()
         throw std::runtime_error("500");
 		//throw std::runtime_error(utils::_defaultErrorPages(500, "The server was unable to open a child process for the CGI"));
 
-    std::cout << "22222222222222222222222222222222222\n";
+    //std::cout << "22222222222222222222222222222222222\n";
     if (pid == 0)
     {
         dup2(inputFileFD, STDIN_FILENO);
@@ -67,7 +67,7 @@ void CGI::execute()
         if (execve(python3.c_str(), &(this->_args[0]), &(this->_env[0])) == -1)
             throw std::runtime_error("500");
 			//throw std::runtime_error(utils::_defaultErrorPages(500, "The server was unable to execute the CGI"));
-		std::cout << "444444444444444444444444\n";
+		//std::cout << "444444444444444444444444\n";
         exit (1);
     }
     else
@@ -77,7 +77,7 @@ void CGI::execute()
 
         time_t start_time = utils::nowTime();
         const int timeout = 1;
-        std::cout << "5555555555555555555555\n";
+        //std::cout << "5555555555555555555555\n";
         while (true)
         {
             pid_t result = waitpid(pid, &(this->_status), WNOHANG);
@@ -98,7 +98,7 @@ void CGI::execute()
             else
                 break;
         }
-        std::cout << "6666666666666666666666666\n";
+        //std::cout << "6666666666666666666666666\n";
 
     }
 }

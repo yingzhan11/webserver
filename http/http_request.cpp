@@ -52,9 +52,6 @@ static http_request::HTTP_CODE unlink_regular_file_only(const std::string& absPa
     return http_request::INTERNAL_ERROR;
 }
 
-
-
-
 int setnonblocking(int fd)
 {
 	int old_option = fcntl(fd, F_GETFL);
@@ -196,28 +193,22 @@ http_request::LINE_STATUS http_request::parse_line()
            
             if ((w_checked_idx + 1) == w_read_idx)
                 return LINE_OPEN;
-
-       
             if (w_read_buf[w_checked_idx + 1] == '\n')
             {
                 w_read_buf[w_checked_idx] = '\0';    
                 w_checked_idx += 2;                  
                 return LINE_OK;
             }
-
-         
             return LINE_BAD;
         }
         else if (temp == '\n')
         {
-          
             if (w_checked_idx > 0 && w_read_buf[w_checked_idx - 1] == '\r')
             {
                 w_read_buf[w_checked_idx - 1] = '\0'; 
                 w_checked_idx++;
                 return LINE_OK;
             }
-         
             return LINE_BAD;
         }
     }
@@ -252,12 +243,13 @@ http_request::HTTP_CODE http_request::parse_request_line(char *text)
         is_cgi = 1;
     }
     else if (strcasecmp(method, "DELETE") == 0)
-{
-    w_method = DELETE;
-    is_cgi = 0;                           // DELETE 不走 CGI
-}
+    {
+        w_method = DELETE;
+        is_cgi = 0;                           // DELETE 不走 CGI
+    }
     else
         return BAD_REQUEST;
+
     w_url += strspn(w_url, " \t");
     w_version = strpbrk(w_url, " \t");
     if (!w_version)
@@ -312,11 +304,11 @@ http_request::HTTP_CODE http_request::parse_headers(char *text)
         text += strspn(text, " \t");
         w_content_length = atol(text);
     }
-    else if (strncasecmp(text, "Content-Type:", 13) == 0) {
-    text += 13; text += strspn(text, " \t");
-    w_content_type = text;  
-}
-
+    else if (strncasecmp(text, "Content-Type:", 13) == 0)
+    {
+        text += 13; text += strspn(text, " \t");
+        w_content_type = text;  
+    }
     else if (strncasecmp(text, "Host:", 5) == 0)
     {
         text += 5;
@@ -370,15 +362,9 @@ void http_request::_exportEnv(CGI &cgi)
         default: method = "UNKNOWN"; break;
     }
     cgi.setNewEnv("REQUEST_METHOD", method);
-
-	// cgi.setNewEnv("CONTENT_TYPE" ,this->_myRequest.getHeadData()["Content-Type"]);
-	// cgi.setNewEnv("CONTENT_LENGTH", this->_myRequest.getHeadData()["Content-Length"]);
-    
     // 内容长度 & 类型
-cgi.setNewEnv("CONTENT_LENGTH", std::to_string(w_content_length));
-cgi.setNewEnv("CONTENT_TYPE", w_content_type.empty() ? "" : w_content_type);
-
-
+    cgi.setNewEnv("CONTENT_LENGTH", std::to_string(w_content_length));
+    cgi.setNewEnv("CONTENT_TYPE", w_content_type.empty() ? "" : w_content_type);
 
     // Host 字段
     cgi.setNewEnv("SERVER_NAME", w_host);
@@ -386,16 +372,14 @@ cgi.setNewEnv("CONTENT_TYPE", w_content_type.empty() ? "" : w_content_type);
 
     // payload（POST body）
     if (w_string)
-    {
-        // std::vector<char> w_payload(w_string, w_string + w_content_length);
         cgi.setNewEnv("PAYLOAD", w_string);
-    }
     else
         cgi.setNewEnv("PAYLOAD", "");
 }
 
 // 最长前缀匹配：从 server.routes 里选出 path 最长且是 url 前缀的那条
-static const RouteConfig* pick_route_for(const ServerConfig& s, const std::string& urlPath) {
+static const RouteConfig* pick_route_for(const ServerConfig& s, const std::string& urlPath)
+{
     const RouteConfig* best = NULL;
     size_t bestLen = 0;
     for (size_t i = 0; i < s.routes.size(); ++i) {
@@ -503,69 +487,68 @@ bool http_request::compute_paths_once(const std::string& /*urlPath*/) {
 
 
 http_request::HTTP_CODE http_request::do_request()
-{  const std::string urlPath = (w_url && *w_url) ? std::string(w_url) : std::string("/");
+{  
+    const std::string urlPath = (w_url && *w_url) ? std::string(w_url) : std::string("/");
 
     // ✅ 计算并缓存：w_root_abs / w_upload_abs
     if (!compute_paths_once(urlPath)) {
         return INTERNAL_ERROR;
-    }  if (w_method == DELETE) {
-    std::cerr << "\n========== [DELETE DEBUG] (.py upload_to) ==========\n";
+    } if (w_method == DELETE) {
+        std::cerr << "\n========== [DELETE DEBUG] (.py upload_to) ==========\n";
 
-    // 必须先算出缓存
-    const std::string urlPath = (w_url && *w_url) ? std::string(w_url) : std::string("/");
-    if (!compute_paths_once(urlPath)) {
-        std::cerr << "[DELETE] compute_paths_once failed\n";
-        return INTERNAL_ERROR;
+        // 必须先算出缓存
+        const std::string urlPath = (w_url && *w_url) ? std::string(w_url) : std::string("/");
+        if (!compute_paths_once(urlPath)) {
+            std::cerr << "[DELETE] compute_paths_once failed\n";
+            return INTERNAL_ERROR;
+        }
+
+        std::cerr << "[DELETE] urlPath = " << urlPath << "\n";
+        std::cerr << "[DELETE] w_root_abs = " << w_root_abs << "\n";
+        std::cerr << "[DELETE] w_upload_url_prefix = " << w_upload_url_prefix << "\n";
+        std::cerr << "[DELETE] w_upload_abs = " << w_upload_abs << "\n";
+
+        if (w_upload_abs.empty() || w_upload_url_prefix.empty()) {
+            std::cerr << "[DELETE] no upload_to configured on .py route or dir invalid\n";
+            return FORBIDDEN_REQUEST;
+        }
+
+        // URL 必须以 upload_to (URL 前缀) 开头，且边界正确
+        const std::string& P = w_upload_url_prefix; // 例如 "/uploads"
+        if (!(urlPath.compare(0, P.size(), P) == 0 &&
+            (urlPath.size() == P.size() || urlPath[P.size()] == '/'))) {
+            std::cerr << "[DELETE] URL does not start with upload URL prefix\n";
+            return FORBIDDEN_REQUEST;
+        }
+
+        // 相对路径部分
+        std::string rel = urlPath.substr(P.size());
+        if (!rel.empty() && rel[0] == '/') rel.erase(0, 1);
+        std::cerr << "[DELETE] rel = " << rel << "\n";
+
+        // 目标物理路径
+        std::string target_raw = w_upload_abs;
+        if (!rel.empty()) target_raw += "/" + rel;
+        std::cerr << "[DELETE] target_raw = " << target_raw << "\n";
+
+        std::string target_abs;
+        if (!realpath_strict(target_raw, target_abs)) {
+            std::cerr << "[DELETE] realpath(target) failed => 404\n";
+            return NO_RESOURCE;
+        }
+        std::cerr << "[DELETE] target_abs = " << target_abs << "\n";
+
+        if (!is_inside_dir(w_upload_abs, target_abs)) {
+            std::cerr << "[DELETE] target not inside upload dir => 403\n";
+            return FORBIDDEN_REQUEST;
+        }
+
+        http_request::HTTP_CODE res = unlink_regular_file_only(target_abs);
+        std::cerr << "[DELETE] unlink result code = " << res << "\n";
+        if (res == DELETE_OK) std::cerr << "[DELETE] ✅ deleted\n";
+        std::cerr << "===============================================\n";
+        return res;
     }
-
-    std::cerr << "[DELETE] urlPath = " << urlPath << "\n";
-    std::cerr << "[DELETE] w_root_abs = " << w_root_abs << "\n";
-    std::cerr << "[DELETE] w_upload_url_prefix = " << w_upload_url_prefix << "\n";
-    std::cerr << "[DELETE] w_upload_abs = " << w_upload_abs << "\n";
-
-    if (w_upload_abs.empty() || w_upload_url_prefix.empty()) {
-        std::cerr << "[DELETE] no upload_to configured on .py route or dir invalid\n";
-        return FORBIDDEN_REQUEST;
-    }
-
-    // URL 必须以 upload_to (URL 前缀) 开头，且边界正确
-    const std::string& P = w_upload_url_prefix; // 例如 "/uploads"
-    if (!(urlPath.compare(0, P.size(), P) == 0 &&
-          (urlPath.size() == P.size() || urlPath[P.size()] == '/'))) {
-        std::cerr << "[DELETE] URL does not start with upload URL prefix\n";
-        return FORBIDDEN_REQUEST;
-    }
-
-    // 相对路径部分
-    std::string rel = urlPath.substr(P.size());
-    if (!rel.empty() && rel[0] == '/') rel.erase(0, 1);
-    std::cerr << "[DELETE] rel = " << rel << "\n";
-
-    // 目标物理路径
-    std::string target_raw = w_upload_abs;
-    if (!rel.empty()) target_raw += "/" + rel;
-    std::cerr << "[DELETE] target_raw = " << target_raw << "\n";
-
-    std::string target_abs;
-    if (!realpath_strict(target_raw, target_abs)) {
-        std::cerr << "[DELETE] realpath(target) failed => 404\n";
-        return NO_RESOURCE;
-    }
-    std::cerr << "[DELETE] target_abs = " << target_abs << "\n";
-
-    if (!is_inside_dir(w_upload_abs, target_abs)) {
-        std::cerr << "[DELETE] target not inside upload dir => 403\n";
-        return FORBIDDEN_REQUEST;
-    }
-
-    http_request::HTTP_CODE res = unlink_regular_file_only(target_abs);
-    std::cerr << "[DELETE] unlink result code = " << res << "\n";
-    if (res == DELETE_OK) std::cerr << "[DELETE] ✅ deleted\n";
-    std::cerr << "===============================================\n";
-    return res;
-}
-
-
 
     // 默认根目录
     std::string root = "";
@@ -575,46 +558,46 @@ http_request::HTTP_CODE http_request::do_request()
             root = cfg.root_directory;
         }
     }
-fprintf(stderr, "[DEBUG] method=%d is_cgi=%d url=%s\n",
-        (int)w_method, is_cgi, w_url ? w_url : "(null)");
-fflush(stderr);
+    fprintf(stderr, "[DEBUG] method=%d is_cgi=%d url=%s\n",
+            (int)w_method, is_cgi, w_url ? w_url : "(null)");
+    fflush(stderr);
 
     if (is_cgi == 1)
     {
+        // === 找到当前请求对应的 route ===
+        std::string upload_path = "";  // 默认
+        if (serverconfig && !serverconfig->empty()) {
+            const ServerConfig &srv = *(serverconfig->begin());
+            const std::string urlPath = (w_url && *w_url) ? std::string(w_url) : std::string("/");
 
-// === 找到当前请求对应的 route ===
-std::string upload_path = "";  // 默认
-if (serverconfig && !serverconfig->empty()) {
-    const ServerConfig &srv = *(serverconfig->begin());
-    const std::string urlPath = (w_url && *w_url) ? std::string(w_url) : std::string("/");
+            std::cout << "[UPLOAD DEBUG] urlPath = " << urlPath << std::endl;
+            std::cout << "[UPLOAD DEBUG] server.root_directory = " << srv.root_directory << std::endl;
 
-    std::cout << "[UPLOAD DEBUG] urlPath = " << urlPath << std::endl;
-    std::cout << "[UPLOAD DEBUG] server.root_directory = " << srv.root_directory << std::endl;
+            const RouteConfig* r = pick_route_for(srv, urlPath);
+            if (r) {
+                std::cout << "[UPLOAD DEBUG] matched route.path = " << r->path << std::endl;
+                std::cout << "[UPLOAD DEBUG] route.upload_to = " << r->upload_to << std::endl;
+            } else {
+                std::cout << "[UPLOAD DEBUG] no matching route found for this URL" << std::endl;
+            }
 
-    const RouteConfig* r = pick_route_for(srv, urlPath);
-    if (r) {
-        std::cout << "[UPLOAD DEBUG] matched route.path = " << r->path << std::endl;
-        std::cout << "[UPLOAD DEBUG] route.upload_to = " << r->upload_to << std::endl;
-    } else {
-        std::cout << "[UPLOAD DEBUG] no matching route found for this URL" << std::endl;
-    }
+            if (r && !r->upload_to.empty()) {
+                upload_path = r->upload_to;   // ← 用配置里的 upload_to 覆盖默认
+                // 如果配置里是相对路径，比如 "/upload"，可以拼上 server 根目录：
+                if (!srv.root_directory.empty() && upload_path[0] == '/')
+                    upload_path = srv.root_directory + upload_path;
 
-    if (r && !r->upload_to.empty()) {
-        upload_path = r->upload_to;   // ← 用配置里的 upload_to 覆盖默认
-        // 如果配置里是相对路径，比如 "/upload"，可以拼上 server 根目录：
-        if (!srv.root_directory.empty() && upload_path[0] == '/')
-            upload_path = srv.root_directory + upload_path;
+                std::cout << "[UPLOAD DEBUG] final upload_path after merge = " << upload_path << std::endl;
+            } else {
+                std::cout << "[UPLOAD DEBUG] route.upload_to empty, using default upload_path = " << upload_path << std::endl;
+            }
+        }
 
-        std::cout << "[UPLOAD DEBUG] final upload_path after merge = " << upload_path << std::endl;
-    } else {
-        std::cout << "[UPLOAD DEBUG] route.upload_to empty, using default upload_path = " << upload_path << std::endl;
-    }
-}
-
-char abs_root[PATH_MAX];
-if (realpath(root.c_str(), abs_root)) {
-    root = abs_root;
-}
+        char abs_root[PATH_MAX];
+        if (realpath(root.c_str(), abs_root)) {
+            root = abs_root;
+        }
+                
         std::cout << "++++++++++++++++++++++++++get cgi+++++++++++++++" << std::endl;
         std::cout << "[CGI] root = " << root << std::endl;
         std::cout << "[CGI] url = " << w_url << std::endl;
@@ -622,35 +605,33 @@ if (realpath(root.c_str(), abs_root)) {
 
         //获取cgi路径（读取location，或默认）TODO
         snprintf(w_real_file, FILENAME_LEN, "%s/cgi%s", root.c_str(), w_url);
-        
+                
         std::cout << "[CGI] wrf = " << w_real_file << std::endl;
         //需要检查路径是否存在，不在要报错 TODO
+        // 传入 POST 的 body（multipart/raw 都行），否则 CGI 读不到
+        std::vector<char> tmp;
+        if (w_method == POST && w_string && w_content_length > 0) {
+            tmp.assign(w_string, w_string + w_content_length);
+        }
 
-       // 传入 POST 的 body（multipart/raw 都行），否则 CGI 读不到
-std::vector<char> tmp;
-if (w_method == POST && w_string && w_content_length > 0) {
-    tmp.assign(w_string, w_string + w_content_length);
-}
+        // 用基于 route.upload_to 计算出的 upload_path 构造 CGI
+        CGI cgi(w_real_file, upload_path, tmp, w_content_length);
 
-// 用基于 route.upload_to 计算出的 upload_path 构造 CGI
-CGI cgi(w_real_file, upload_path, tmp, w_content_length);
-
-// 导出环境（会设置 CONTENT_LENGTH/CONTENT_TYPE 等）
-_exportEnv(cgi);
-cgi.setNewEnv("UPLOAD_PATH", upload_path);
-std::cout << "[CGI] UPLOAD_PATH = " << upload_path << std::endl;
-    // 检查 upload_path 是否存在且是目录
-    struct stat upload_stat;
-    if (stat(upload_path.c_str(), &upload_stat) < 0) {
-        std::cerr << "[ERROR] upload path not found: " << upload_path << std::endl;
-        // 可选：返回自定义错误页
-        return FORBIDDEN_REQUEST;
-    }
-    if (!S_ISDIR(upload_stat.st_mode)) {
-        std::cerr << "[ERROR] upload path is not a directory: " << upload_path << std::endl;
-        return FORBIDDEN_REQUEST;
-    }
-
+        // 导出环境（会设置 CONTENT_LENGTH/CONTENT_TYPE 等）
+        _exportEnv(cgi);
+        cgi.setNewEnv("UPLOAD_PATH", upload_path);
+        std::cout << "[CGI] UPLOAD_PATH = " << upload_path << std::endl;
+        // 检查 upload_path 是否存在且是目录
+        struct stat upload_stat;
+        if (stat(upload_path.c_str(), &upload_stat) < 0) {
+            std::cerr << "[ERROR] upload path not found: " << upload_path << std::endl;
+            // 可选：返回自定义错误页
+            return FORBIDDEN_REQUEST;
+        }
+        if (!S_ISDIR(upload_stat.st_mode)) {
+            std::cerr << "[ERROR] upload path is not a directory: " << upload_path << std::endl;
+            return FORBIDDEN_REQUEST;
+        }
 
         std::cout << "++++++++++++++++++++++++++into cgi+++++++++++++++" << std::endl;
         try {
@@ -703,96 +684,95 @@ std::cout << "[CGI] UPLOAD_PATH = " << upload_path << std::endl;
     if (!(w_file_stat.st_mode & S_IROTH))
         return FORBIDDEN_REQUEST;
     bool route_autoindex = false;
-if (serverconfig && !serverconfig->empty()) {
-    const ServerConfig &srv = *(serverconfig->begin());           // 默认 server（不引入按 Host 精选）
-    const std::string urlPath = (w_url && *w_url) ? std::string(w_url) : std::string("/");
-    const RouteConfig* r = pick_route_for(srv, urlPath);
-    if (r) route_autoindex = r->directory_listing;                // ← 关键：读出该 route 的 autoindex
-}
-    if (S_ISDIR(w_file_stat.st_mode))
-{
-    // 1) 先尝试 index 文件：优先用 server 的 default_file；没有就回退到 "index.html"
-    std::string index_name = "index.html";
     if (serverconfig && !serverconfig->empty()) {
-        const ServerConfig &cfg = *(serverconfig->begin());
-        if (!cfg.default_file.empty())
-            index_name = cfg.default_file;
+        const ServerConfig &srv = *(serverconfig->begin());           // 默认 server（不引入按 Host 精选）
+        const std::string urlPath = (w_url && *w_url) ? std::string(w_url) : std::string("/");
+        const RouteConfig* r = pick_route_for(srv, urlPath);
+        if (r) route_autoindex = r->directory_listing;                // ← 关键：读出该 route 的 autoindex
     }
-
-    std::string index_path = std::string(w_real_file);
-    if (!index_path.empty() && index_path[index_path.size() - 1] != '/')
-        index_path += "/";
-    index_path += index_name;
-
-    struct stat idx_stat;
-    if (stat(index_path.c_str(), &idx_stat) == 0 && !S_ISDIR(idx_stat.st_mode)) {
-        int fd2 = open(index_path.c_str(), O_RDONLY);
-        if (fd2 >= 0) {
-            w_file_address = (char *)mmap(0, idx_stat.st_size, PROT_READ, MAP_PRIVATE, fd2, 0);
-            close(fd2);
-            w_file_stat = idx_stat;
-            return FILE_REQUEST;
+    
+    if (S_ISDIR(w_file_stat.st_mode))
+    {
+        // 1) 先尝试 index 文件：优先用 server 的 default_file；没有就回退到 "index.html"
+        std::string index_name = "index.html";
+        if (serverconfig && !serverconfig->empty()) {
+            const ServerConfig &cfg = *(serverconfig->begin());
+            if (!cfg.default_file.empty())
+                index_name = cfg.default_file;
         }
-    }
+
+        std::string index_path = std::string(w_real_file);
+        if (!index_path.empty() && index_path[index_path.size() - 1] != '/')
+            index_path += "/";
+        index_path += index_name;
+
+        struct stat idx_stat;
+        if (stat(index_path.c_str(), &idx_stat) == 0 && !S_ISDIR(idx_stat.st_mode)) {
+            int fd2 = open(index_path.c_str(), O_RDONLY);
+            if (fd2 >= 0) {
+                w_file_address = (char *)mmap(0, idx_stat.st_size, PROT_READ, MAP_PRIVATE, fd2, 0);
+                close(fd2);
+                w_file_stat = idx_stat;
+                return FILE_REQUEST;
+            }
+        }
 
     
-    if (route_autoindex) {
-        DIR *dir = opendir(w_real_file);
-        if (!dir)
-            return FORBIDDEN_REQUEST;
+        if (route_autoindex) {
+            DIR *dir = opendir(w_real_file);
+            if (!dir)
+                return FORBIDDEN_REQUEST;
 
-        std::string html;
-        html.reserve(4096);
-        html += "<!DOCTYPE html><html><head><meta charset=\"utf-8\">";
-        html += "<title>Index of ";
-        html += (w_url ? w_url : "/");
-        html += "</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:12px}ul{line-height:1.6}</style>";
-        html += "</head><body><h2>Index of ";
-        html += (w_url ? w_url : "/");
-        html += "</h2><hr><ul>";
+            std::string html;
+            html.reserve(4096);
+            html += "<!DOCTYPE html><html><head><meta charset=\"utf-8\">";
+            html += "<title>Index of ";
+            html += (w_url ? w_url : "/");
+            html += "</title><style>body{font-family:Arial,Helvetica,sans-serif;padding:12px}ul{line-height:1.6}</style>";
+            html += "</head><body><h2>Index of ";
+            html += (w_url ? w_url : "/");
+            html += "</h2><hr><ul>";
 
-        struct dirent *ent;
-        while ((ent = readdir(dir)) != NULL) {
-            const char *name_c = ent->d_name;
-            if (!name_c) continue;
-            std::string name = name_c;
-            if (name == ".") continue; // 不展示当前目录
+            struct dirent *ent;
+            while ((ent = readdir(dir)) != NULL) {
+                const char *name_c = ent->d_name;
+                if (!name_c) continue;
+                std::string name = name_c;
+                if (name == ".") continue; // 不展示当前目录
 
-            std::string href = (w_url ? std::string(w_url) : std::string("/"));
-            if (!href.empty() && href[href.size() - 1] != '/') href += "/";
-            href += name;
+                std::string href = (w_url ? std::string(w_url) : std::string("/"));
+                if (!href.empty() && href[href.size() - 1] != '/') href += "/";
+                href += name;
 
-            html += "<li><a href=\"";
-            html += href;
-            html += "\">";
-            html += name;
-            html += "</a></li>";
+                html += "<li><a href=\"";
+                html += href;
+                html += "\">";
+                html += name;
+                html += "</a></li>";
+            }
+            closedir(dir);
+
+            html += "</ul><hr></body></html>";
+
+            // 写到临时文件再 mmap（复用你现有 FILE_REQUEST 的发送路径）
+            const char *ai_file = "autoindex.html";
+            int afd = open(ai_file, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+            if (afd < 0) return FORBIDDEN_REQUEST;
+            ssize_t wr = ::write(afd, html.data(), html.size()); // 注意使用 ::write
+            (void)wr;
+            close(afd);
+
+            if (stat(ai_file, &w_file_stat) < 0) return NO_RESOURCE;
+            int fd3 = open(ai_file, O_RDONLY);
+            if (fd3 < 0) return NO_RESOURCE;
+            w_file_address = (char *)mmap(0, w_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd3, 0);
+            close(fd3);
+
+            return FILE_REQUEST;
         }
-        closedir(dir);
-
-        html += "</ul><hr></body></html>";
-
-        // 写到临时文件再 mmap（复用你现有 FILE_REQUEST 的发送路径）
-        const char *ai_file = "autoindex.html";
-        int afd = open(ai_file, O_CREAT | O_WRONLY | O_TRUNC, 0644);
-        if (afd < 0) return FORBIDDEN_REQUEST;
-        ssize_t wr = ::write(afd, html.data(), html.size()); // 注意使用 ::write
-        (void)wr;
-        close(afd);
-
-        if (stat(ai_file, &w_file_stat) < 0) return NO_RESOURCE;
-        int fd3 = open(ai_file, O_RDONLY);
-        if (fd3 < 0) return NO_RESOURCE;
-        w_file_address = (char *)mmap(0, w_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd3, 0);
-        close(fd3);
-
-        return FILE_REQUEST;
+        // 3) 未开启 autoindex，则禁止访问目录
+        return FORBIDDEN_REQUEST;
     }
-
-    // 3) 未开启 autoindex，则禁止访问目录
-    return FORBIDDEN_REQUEST;
-}
-
 
     int fd = open(w_real_file, O_RDONLY);
     if (fd < 0)
@@ -819,42 +799,43 @@ http_request::HTTP_CODE http_request::process_read()
 
         switch (w_check_state)
         {
-        case CHECK_STATE_REQUESTLINE:
-        {	
-            // std::cout << "====header3===============\n";
-            ret = parse_request_line(text);
-            if (ret == BAD_REQUEST)
-                return BAD_REQUEST;
-            break;
-        }
-        case CHECK_STATE_HEADER:
-        {	
-            // std::cout << "====head1===============\n";
-            ret = parse_headers(text);
-            if (ret == BAD_REQUEST)
-                return BAD_REQUEST;
-            else if (ret == GET_REQUEST)
-            {
-					// std::cout << "====header2===============\n";
-                return do_request();
+            case CHECK_STATE_REQUESTLINE:
+            {	
+                // std::cout << "====header3===============\n";
+                ret = parse_request_line(text);
+                if (ret == BAD_REQUEST)
+                    return BAD_REQUEST;
+                break;
             }
-            break;
-        }
-        case CHECK_STATE_CONTENT:
-        {	
-            // std::cout << "====header4===============\n";
-            ret = parse_content(text);
-            if (ret == GET_REQUEST)
-                return do_request();
-            line_status = LINE_OPEN;
-            break;
-        }
-        default:
-            return INTERNAL_ERROR;
+            case CHECK_STATE_HEADER:
+            {	
+                // std::cout << "====head1===============\n";
+                ret = parse_headers(text);
+                if (ret == BAD_REQUEST)
+                    return BAD_REQUEST;
+                else if (ret == GET_REQUEST)
+                {
+                        // std::cout << "====header2===============\n";
+                    return do_request();
+                }
+                break;
+            }
+            case CHECK_STATE_CONTENT:
+            {	
+                // std::cout << "====header4===============\n";
+                ret = parse_content(text);
+                if (ret == GET_REQUEST)
+                    return do_request();
+                line_status = LINE_OPEN;
+                break;
+            }
+            default:
+                return INTERNAL_ERROR;
         }
     }
     return NO_REQUEST;
 }
+
 void http_request::unmap()
 {
     if (w_file_address)
@@ -863,6 +844,7 @@ void http_request::unmap()
         w_file_address = 0;
     }
 }
+
 bool http_request::write()
 {
     int temp = 0;
@@ -965,7 +947,24 @@ bool http_request::add_content(const char *content)
     return add_response("%s", content);
 }
 
-   bool http_request::process_write(http_request::HTTP_CODE ret)
+std::string http_request::_getErrorPage(int code, std::string error_form)
+{
+    std::string defaultErrorPage;
+    if (serverconfig && !serverconfig->empty()) {
+        const ServerConfig &srv = *(serverconfig->begin());
+        std::unordered_map<int, std::string>::const_iterator it = srv.error_pages.find(code);
+        if (it != srv.error_pages.end()) {
+            // Found custom page in config
+            defaultErrorPage = utils::_readFileContent(it->second, srv.root_directory);  // or whatever loads the file
+        } else {
+            // Use default error page
+            defaultErrorPage = utils::_defaultErrorPages(code, error_form);
+        }
+    }
+    return defaultErrorPage;
+}
+
+bool http_request::process_write(http_request::HTTP_CODE ret)
 {
     std::string defaultErrorPage;
 
@@ -973,26 +972,30 @@ bool http_request::add_content(const char *content)
     {
         case INTERNAL_ERROR:
         {
-            defaultErrorPage = utils::_defaultErrorPages(500, error_500_form);
+            defaultErrorPage = _getErrorPage(500, error_500_form);
+            //defaultErrorPage = utils::_defaultErrorPages(500, error_500_form);
             add_status_line(500, error_500_title);
             break;
         }
         case BAD_REQUEST:
         {
             // 这里应当是 400，而不是 404
-            defaultErrorPage = utils::_defaultErrorPages(400, error_400_form);
+            defaultErrorPage = _getErrorPage(400, error_400_form);
+            //defaultErrorPage = utils::_defaultErrorPages(400, error_400_form);
             add_status_line(400, error_400_title);
             break;
         }
         case FORBIDDEN_REQUEST:
         {
-            defaultErrorPage = utils::_defaultErrorPages(403, error_403_form);
+            defaultErrorPage = _getErrorPage(403, error_403_form);
+            //defaultErrorPage = utils::_defaultErrorPages(403, error_403_form);
             add_status_line(403, error_403_title);
             break;
         }
         case NO_RESOURCE:   // ← 新增：处理 404
         {
-            defaultErrorPage = utils::_defaultErrorPages(404, error_404_form);
+            defaultErrorPage = _getErrorPage(404, error_404_form);
+            //defaultErrorPage = utils::_defaultErrorPages(404, error_404_form);
             add_status_line(404, error_404_title);
             break;
         }
@@ -1061,7 +1064,7 @@ bool http_request::add_content(const char *content)
 void http_request::process()
 {
 
-	  std::cout << "=== serverconfig ===\n";
+	std::cout << "=== serverconfig ===\n";
     for (const auto &server : *serverconfig) {
         std::cout << "Server: " << server.server_name
                   << ", IP: " << server.ip

@@ -31,7 +31,7 @@ if method == "GET":
     <body>
         <div class="container-top">
             <header>
-                <h2 class="site-logo">Webserver - Delete</h2>
+                <h2 class="site-logo">Webserver - Cgi</h2>
                 <h5 class="site-slogan">This is when you finally understand why a URL starts with HTTP</h5>
                 <nav>
                     <ul>

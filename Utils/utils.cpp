@@ -133,3 +133,18 @@ std::string utils::_defaultErrorPages(int status, std::string subText)
 
 	return (BodyPage);
 }
+
+std::string utils::_readFileContent(const std::string &path, const std::string &root = "") {
+    std::string full_path = path;
+    if (!root.empty() && path[0] != '/')
+        full_path = root + "/" + path;
+
+    std::ifstream file(full_path.c_str(), std::ios::in | std::ios::binary);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file: " + full_path);
+    }
+
+    std::ostringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}

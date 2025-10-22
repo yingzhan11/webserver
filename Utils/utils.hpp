@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <ctime>
 #include <sstream>
+#include <fstream>
 #include <map>
 
 class utils
@@ -42,5 +43,6 @@ public:
 	static int *u_pipefd;
 	static int u_epollfd;
 	static std::string _defaultErrorPages(int status, std::string subText);
+	static std::string _readFileContent(const std::string &path, const std::string &root);
 };
 
