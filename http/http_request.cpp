@@ -962,106 +962,100 @@ bool http_request::add_content(const char *content)
 {
     return add_response("%s", content);
 }
-bool http_request::process_write(http_request::HTTP_CODE ret)
+
+   bool http_request::process_write(http_request::HTTP_CODE ret)
 {
     std::string defaultErrorPage;
+
     switch (ret)
     {
         case INTERNAL_ERROR:
         {
-            //TODO need to check location whether there is error page, if not use this defaultErrorPage
             defaultErrorPage = utils::_defaultErrorPages(500, error_500_form);
             add_status_line(500, error_500_title);
-            //add_headers(defaultErrorPage.size());
-            //if (!add_content(defaultErrorPage.c_str()))
-            //    return false;
             break;
         }
         case BAD_REQUEST:
         {
-            defaultErrorPage = utils::_defaultErrorPages(404, error_404_form);
-            add_status_line(404, error_404_title);
-            //add_headers(strlen(error_404_form));
-            //if (!add_content(error_404_form))
-            //    return false;
+            // 这里应当是 400，而不是 404
+            defaultErrorPage = utils::_defaultErrorPages(400, error_400_form);
+            add_status_line(400, error_400_title);
             break;
         }
         case FORBIDDEN_REQUEST:
         {
             defaultErrorPage = utils::_defaultErrorPages(403, error_403_form);
             add_status_line(403, error_403_title);
-            //add_headers(strlen(error_403_form));
-            //if (!add_content(error_403_form))
-            //    return false;
+            break;
+        }
+        case NO_RESOURCE:   // ← 新增：处理 404
+        {
+            defaultErrorPage = utils::_defaultErrorPages(404, error_404_form);
+            add_status_line(404, error_404_title);
             break;
         }
         case DELETE_OK:
-{
-    const char *ok_delete =
-        "<html><body><h3>✅ File deleted successfully.</h3></body></html>";
+        {
+            const char *ok_delete =
+                "<html><body><h3>✅ File deleted successfully.</h3></body></html>";
+            add_status_line(200, ok_200_title);
+            add_headers(strlen(ok_delete));
+            if (!add_content(ok_delete)) return false;
 
-    add_status_line(200, ok_200_title);
-    add_headers(strlen(ok_delete));
-    if (!add_content(ok_delete))
-        return false;
-
-    w_iv[0].iov_base = w_write_buf;
-    w_iv[0].iov_len = w_write_idx;
-    w_iv_count = 1;
-    bytes_to_send = w_write_idx;
-    return true;
-}
-
+            w_iv[0].iov_base = w_write_buf;
+            w_iv[0].iov_len  = w_write_idx;
+            w_iv_count       = 1;
+            bytes_to_send    = w_write_idx;
+            return true;
+        }
         case FILE_REQUEST:
         {
-            if (is_cgi == 1)
-            {
-                // send CGI output as-is
+            if (is_cgi == 1) {
+                // CGI: 直接把 cgi.html 的内容作为响应体（内部已 mmap 到 w_file_address）
                 w_iv[0].iov_base = w_file_address;
-                w_iv[0].iov_len = w_file_stat.st_size;
-                w_iv_count = 1;
-                bytes_to_send = w_file_stat.st_size;
+                w_iv[0].iov_len  = w_file_stat.st_size;
+                w_iv_count       = 1;
+                bytes_to_send    = w_file_stat.st_size;
                 return true;
-            }
-            else {
+            } else {
                 add_status_line(200, ok_200_title);
-                if (w_file_stat.st_size != 0)
-                {
+                if (w_file_stat.st_size != 0) {
                     add_headers(w_file_stat.st_size);
                     w_iv[0].iov_base = w_write_buf;
-                    w_iv[0].iov_len = w_write_idx;
+                    w_iv[0].iov_len  = w_write_idx;
                     w_iv[1].iov_base = w_file_address;
-                    w_iv[1].iov_len = w_file_stat.st_size;
-                    w_iv_count = 2;
-                    bytes_to_send = w_write_idx + w_file_stat.st_size;
+                    w_iv[1].iov_len  = w_file_stat.st_size;
+                    w_iv_count       = 2;
+                    bytes_to_send    = w_write_idx + w_file_stat.st_size;
                     return true;
-                }
-                else
-                {
+                } else {
                     const char *ok_string = "<html><body></body></html>";
                     add_headers(strlen(ok_string));
-                    if (!add_content(ok_string))
-                        return false;
+                    if (!add_content(ok_string)) return false;
                 }
             }
+            break;
         }
         default:
             return false;
     }
 
-    if (ret != FILE_REQUEST) {
+    // 只要不是 FILE_REQUEST/DELETE_OK，走这里统一发送错误页
+    if (ret != FILE_REQUEST && ret != DELETE_OK) {
         add_headers(defaultErrorPage.size());
-        if (!add_content(defaultErrorPage.c_str()))
-            return false;
-    }
-    
+        if (!add_content(defaultErrorPage.c_str())) return false;
 
-    w_iv[0].iov_base = w_write_buf;
-    w_iv[0].iov_len = w_write_idx;
-    w_iv_count = 1;
-    bytes_to_send = w_write_idx;
+        w_iv[0].iov_base = w_write_buf;
+        w_iv[0].iov_len  = w_write_idx;
+        w_iv_count       = 1;
+        bytes_to_send    = w_write_idx;
+        return true;
+    }
+
     return true;
 }
+
+
 void http_request::process()
 {
 

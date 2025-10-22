@@ -113,31 +113,43 @@
             input.value = filename;
             input.focus();
         }
+document.getElementById('delete-form').addEventListener('submit', async function (event) {
+  event.preventDefault();
+  const filename = document.getElementById('filename').value.trim();
+  if (!filename) return alert("Please enter a filename.");
+  if (!confirm(`Are you sure you want to delete "${filename}"?`)) return;
 
-        document.getElementById('delete-form').addEventListener('submit', async function (event) {
-            event.preventDefault();
-            const filename = document.getElementById('filename').value.trim();
-            if (!filename) return alert("Please enter a filename.");
+  const url = `${uploadBase}/${encodeURIComponent(filename)}`;
 
-            if (!confirm(`Are you sure you want to delete "${filename}"?`)) return;
+  try {
+    const res = await fetch(url, { method: 'DELETE' });
 
-            const url = `${uploadBase}/${encodeURIComponent(filename)}`;
-            try {
-                const res = await fetch(url, { method: 'DELETE' });
-                if (res.ok) {
-                    alert(`✅ "${filename}" deleted successfully!`);
-                    loadFileList();
-                } else if (res.status === 404) {
-                    alert(`❌ File not found.`);
-                } else if (res.status === 403) {
-                    alert(`🚫 Permission denied.`);
-                } else {
-                    alert(`⚠️ Delete failed. Status: ${res.status}`);
-                }
-            } catch (err) {
-                alert("Network error: " + err.message);
-            }
-        });
+    if (res.ok) {
+      alert(`✅ "${filename}" deleted successfully!`);
+      loadFileList();
+      return;
+    }
+
+    // 失败：尝试把返回当成整页 HTML 渲染
+    const ct   = (res.headers.get('Content-Type') || '').toLowerCase();
+    const text = await res.text();
+    const looksHtml = ct.includes('html') || /^\s*<!doctype html>|^\s*<html/i.test(text);
+
+    if (looksHtml) {
+      document.open();
+      document.write(text);
+      document.close();
+      return;
+    }
+
+    // 兜底（非 HTML）
+    alert(`⚠️ Delete failed. Status: ${res.status}\n${text}`);
+
+  } catch (err) {
+    alert("Network error: " + err.message);
+  }
+});
+
 
         window.addEventListener('DOMContentLoaded', loadFileList);
     </script>
