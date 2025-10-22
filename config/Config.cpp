@@ -161,6 +161,13 @@ std::vector<int> Config::_checkPorts(std::string const &portStr)
 	int port;
 	std::vector<int> ports;
 	while (iss >> port) {
+		for (std::vector<ServerConfig>::const_iterator it = servers.begin(); it != servers.end(); ++it) {
+            for (std::vector<int>::const_iterator pit = it->ports.begin(); pit != it->ports.end(); ++pit) {
+                if (*pit == port) {
+                    throw std::runtime_error("Port " + std::to_string(port) + " already used by another server");
+                }
+            }
+        }
 		ports.push_back(port);
 	}
 	return ports;

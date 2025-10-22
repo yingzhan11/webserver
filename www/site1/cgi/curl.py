@@ -27,7 +27,7 @@ types = {
 content_len = 0
 time_stamp = 0
 status = ""
-html_content = """<!DOCTYPE html>\n<html lang="pt-BR"><head></head>"""
+html_content = """<!DOCTYPE html>\n<html lang="en"><head></head>"""
 
 if method == "POST":
     if 'CONTENT_TYPE' in os.environ:
