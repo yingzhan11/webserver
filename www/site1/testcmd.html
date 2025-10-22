@@ -62,8 +62,8 @@
                 <p>6 - Run the command below in the terminal to test an unknown method.</p>
                 <pre><code>curl -X AFE http://localhost:8080/</code></pre>
 
-                <p>7 - Run the command below in the terminal to test the POST method with chunked transfer for an image.</p>                
-                <pre><code>curl --trace - --header "Transfer-Encoding: chunked" --header "Content-Type: image/jpeg" --data-binary @/home/ivbatist/Downloads/wallpaper.jpg http://localhost:8080/curl.py</code></pre>
+                <p>7 - Run the command below in the terminal to test the POST method for an image.</p>                
+                <pre><code>curl --header "Content-Type: image/jpeg" --data-binary @/home/yzhan/Downloads/wallpaper.jpg http://localhost:8080/curl.py</code></pre>
 
                 <p>8 - Run the command below in the terminal to test the POST method with chunked transfer for text.</p>  
                 <pre><code>curl --trace - --header "Transfer-Encoding: chunked" --header "Content-Type: text/plain" --data "HELLOTHERE" http://localhost:8080/curl.py</code></pre>

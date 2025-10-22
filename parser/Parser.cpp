@@ -120,12 +120,7 @@ void Parser::_parseServerSetting(std::string &token, char &currentChar)
             _getSetting(token, currentChar, this->_serverSetting);
         // if it is location, need more exe
         if (token == "location")
-        {
-            //TODO
-            
             this->_locations.insert(_getLocationSetting(currentChar));
-
-        }
         //是server就获取下一个token
         token = _checkNextToken(currentChar);
     }
@@ -203,7 +198,24 @@ void Parser::_getSetting(std::string const &key, char &currentChar, RawSetting &
         throw std::runtime_error("Parser: No value found for this key: " + key);
     //if there are multiple ports, add all of them in one key
     if (key == "listen" && setting.find(key) != setting.end())
-        setting[key] += " " + value;
+    {
+        //checker if value already here TODO
+        // Split existing values (they’re space-separated)
+        std::istringstream iss(setting[key]);
+        std::string token;
+        bool exists = false;
+
+        while (iss >> token) {
+            if (token == value) {  // already exists
+                exists = true;
+                break;
+            }
+        }
+
+        // Only append if not already present
+        if (!exists)
+            setting[key] += " " + value;
+    }
     else
         setting[key] = value;
 }
